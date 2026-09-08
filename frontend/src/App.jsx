@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Catalog from './pages/student/Catalog';
 import TrackView from './pages/student/TrackView';
 import LessonView from './pages/student/LessonView';
+import ModuleQuiz from './pages/student/ModuleQuiz';
 import ProgressView from './pages/student/ProgressView';
 import TestList from './pages/student/TestList';
 import TestRunner from './pages/student/TestRunner';
@@ -34,6 +35,7 @@ export default function App() {
         {/* Student */}
         <Route path="/catalog" element={<RequireAuth role="student"><Catalog /></RequireAuth>} />
         <Route path="/tracks/:slug" element={<RequireAuth role="student"><TrackView /></RequireAuth>} />
+        <Route path="/tracks/:slug/modules/:moduleId/quiz" element={<RequireAuth role="student"><ModuleQuiz /></RequireAuth>} />
         <Route path="/lessons/:id" element={<RequireAuth role="student"><LessonView /></RequireAuth>} />
         <Route path="/progress" element={<RequireAuth role="student"><ProgressView /></RequireAuth>} />
         <Route path="/tests" element={<RequireAuth role="student"><TestList /></RequireAuth>} />

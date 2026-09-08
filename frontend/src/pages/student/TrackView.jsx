@@ -38,7 +38,21 @@ export default function TrackView() {
               <li key={l.id}><Link to={`/lessons/${l.id}`}>{l.title}</Link></li>
             ))}
           </ul>
-          <div style={{ display: 'flex', gap: 8 }}>
+
+          {m.quiz && m.quiz.questionCount > 0 && (
+            <p style={{ margin: '4px 0' }}>
+              <Link className="btn secondary" to={`/tracks/${slug}/modules/${m.id}/quiz`}>
+                {m.quiz.attempt ? 'Retake' : 'Take'} the module quiz
+              </Link>
+              {' '}
+              <span className="muted" style={{ fontSize: 13 }}>
+                {m.quiz.questionCount} questions · pass {m.quiz.passPercent}%
+                {m.quiz.attempt && ` · last score ${m.quiz.attempt.percent}%`}
+              </span>
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             {m.progress.status !== 'completed'
               ? <button onClick={() => setStatus(m.id, 'completed')}>Mark module complete</button>
               : <button className="secondary" onClick={() => setStatus(m.id, 'in_progress')}>Reopen</button>}

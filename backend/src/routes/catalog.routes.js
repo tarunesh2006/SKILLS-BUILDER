@@ -1,7 +1,10 @@
 const express = require('express');
+const { z } = require('zod');
 const db = require('../db');
 const { asyncHandler, notFound } = require('../utils/http');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
+const { body } = require('../utils/validate');
+const moduleQuiz = require('../services/moduleQuiz.service');
 
 const router = express.Router();
 router.use(authenticate); // catalog is for logged-in students/admins
@@ -47,23 +50,98 @@ router.get(
     );
 
     let progressByModule = {};
+    let attemptByQuiz = {};
     if (req.user.role === 'student') {
       const rows = await db.query(
         `SELECT module_id, status, completed_at FROM progress WHERE student_id = :sid`,
         { sid: req.user.id },
       );
       progressByModule = Object.fromEntries(rows.map((r) => [r.module_id, r]));
+
+      const attempts = await db.query(
+        `SELECT a.quiz_id, a.percent, a.passed
+           FROM module_quiz_attempts a
+           JOIN module_quizzes q ON q.id = a.quiz_id
+           JOIN modules m ON m.id = q.module_id
+          WHERE a.student_id = :sid AND m.track_id = :tid`,
+        { sid: req.user.id, tid: track.id },
+      );
+      attemptByQuiz = Object.fromEntries(attempts.map((a) => [a.quiz_id, a]));
     }
+
+    // one lightweight row per module quiz (id + question count), no answers
+    const quizzes = await db.query(
+      `SELECT q.id, q.module_id, q.title, q.pass_percent,
+              COUNT(qq.id) AS question_count
+         FROM module_quizzes q
+         JOIN modules m ON m.id = q.module_id
+    LEFT JOIN module_quiz_questions qq ON qq.quiz_id = q.id
+        WHERE m.track_id = :tid AND q.is_published = 1
+        GROUP BY q.id`,
+      { tid: track.id },
+    );
+    const quizByModule = Object.fromEntries(quizzes.map((q) => [q.module_id, q]));
 
     res.json({
       track,
-      modules: modules.map((m) => ({
-        ...m,
-        lessons: lessons.filter((l) => l.module_id === m.id)
-          .map(({ module_id, ...rest }) => rest),
-        progress: progressByModule[m.id] || { status: 'not_started' },
-      })),
+      modules: modules.map((m) => {
+        const q = quizByModule[m.id];
+        return {
+          ...m,
+          lessons: lessons.filter((l) => l.module_id === m.id)
+            .map(({ module_id, ...rest }) => rest),
+          progress: progressByModule[m.id] || { status: 'not_started' },
+          quiz: q
+            ? {
+              id: q.id,
+              title: q.title,
+              questionCount: Number(q.question_count),
+              passPercent: q.pass_percent,
+              attempt: attemptByQuiz[q.id] || null,
+            }
+            : null,
+        };
+      }),
     });
+  }),
+);
+
+// GET /catalog/modules/:moduleId/quiz — questions + options, no answers
+router.get(
+  '/modules/:moduleId/quiz',
+  asyncHandler(async (req, res) => {
+    const quiz = await moduleQuiz.loadQuizByModule(req.params.moduleId);
+    if (!quiz || !quiz.is_published) throw notFound('This module has no quiz');
+    const view = moduleQuiz.toStudentView(quiz);
+    if (req.user.role === 'student') {
+      const attempt = await db.one(
+        `SELECT score, max_score, percent, passed, attempts
+           FROM module_quiz_attempts WHERE student_id = :sid AND quiz_id = :qid`,
+        { sid: req.user.id, qid: quiz.id },
+      );
+      view.lastAttempt = attempt || null;
+    }
+    res.json({ quiz: view });
+  }),
+);
+
+// POST /catalog/modules/:moduleId/quiz/submit — grade and return feedback
+router.post(
+  '/modules/:moduleId/quiz/submit',
+  requireRole('student'),
+  body(z.object({
+    answers: z.array(z.object({
+      questionId: z.coerce.number().int().positive(),
+      optionIds: z.array(z.coerce.number().int().positive()).default([]),
+    })).min(1),
+  })),
+  asyncHandler(async (req, res) => {
+    const result = await moduleQuiz.grade({
+      moduleId: Number(req.params.moduleId),
+      studentId: req.user.id,
+      answers: req.body.answers,
+    });
+    res.json(result);
   }),
 );
 

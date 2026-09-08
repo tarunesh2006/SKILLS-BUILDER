@@ -20,6 +20,16 @@ export function Markdown({ children }) {
   );
 }
 
+// Inline markdown (no block <p> wrapper) — for option labels, table cells, etc.
+const INLINE_COMPONENTS = { p: ({ children }) => <>{children}</> };
+export function MarkdownInline({ children }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={INLINE_COMPONENTS}>
+      {children || ''}
+    </ReactMarkdown>
+  );
+}
+
 export function ProgressBar({ percent }) {
   return (
     <div className="bar" title={`${percent ?? 0}%`}>

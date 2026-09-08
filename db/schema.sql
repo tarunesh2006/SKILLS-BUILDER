@@ -16,6 +16,10 @@ DROP TABLE IF EXISTS test_cases;
 DROP TABLE IF EXISTS test_item_options;
 DROP TABLE IF EXISTS test_items;
 DROP TABLE IF EXISTS tests;
+DROP TABLE IF EXISTS module_quiz_attempts;
+DROP TABLE IF EXISTS module_quiz_options;
+DROP TABLE IF EXISTS module_quiz_questions;
+DROP TABLE IF EXISTS module_quizzes;
 DROP TABLE IF EXISTS progress;
 DROP TABLE IF EXISTS lessons;
 DROP TABLE IF EXISTS modules;
@@ -100,6 +104,63 @@ CREATE TABLE progress (
   UNIQUE KEY uq_progress (student_id, module_id),
   FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (module_id)  REFERENCES modules(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ----------------------------------------------------------------------------
+--  Module "check your understanding" quizzes
+--
+--  Part of COURSE DELIVERY, not the Test module: short MCQ self-checks that sit
+--  on the module page (Cisco NetAcad style). No access code, retakeable,
+--  immediate feedback with explanations. The admin-managed, code-gated exams
+--  live separately in tests / test_items / test_access.
+-- ----------------------------------------------------------------------------
+CREATE TABLE module_quizzes (
+  id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  module_id     BIGINT UNSIGNED NOT NULL UNIQUE,   -- at most one quiz per module
+  title         VARCHAR(160) NOT NULL DEFAULT 'Check Your Understanding',
+  pass_percent  INT NOT NULL DEFAULT 70,           -- >= this marks the module complete
+  is_published  TINYINT(1) NOT NULL DEFAULT 1,
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE module_quiz_questions (
+  id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  quiz_id       BIGINT UNSIGNED NOT NULL,
+  prompt_md     MEDIUMTEXT NOT NULL,
+  -- 'mcq' = exactly one correct option; 'multi' = one or more correct options
+  type          ENUM('mcq','multi') NOT NULL DEFAULT 'mcq',
+  explanation_md TEXT NULL,                         -- shown after grading
+  sort_order    INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (quiz_id) REFERENCES module_quizzes(id) ON DELETE CASCADE,
+  INDEX idx_mqq_quiz (quiz_id, sort_order)
+) ENGINE=InnoDB;
+
+CREATE TABLE module_quiz_options (
+  id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  question_id   BIGINT UNSIGNED NOT NULL,
+  label         VARCHAR(600) NOT NULL,
+  is_correct    TINYINT(1) NOT NULL DEFAULT 0,
+  sort_order    INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (question_id) REFERENCES module_quiz_questions(id) ON DELETE CASCADE,
+  INDEX idx_mqo_question (question_id, sort_order)
+) ENGINE=InnoDB;
+
+-- Latest attempt per (student, quiz). Retaking overwrites. Visible to admin.
+CREATE TABLE module_quiz_attempts (
+  id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  student_id    BIGINT UNSIGNED NOT NULL,
+  quiz_id       BIGINT UNSIGNED NOT NULL,
+  score         INT NOT NULL,
+  max_score     INT NOT NULL,
+  percent       INT NOT NULL,
+  passed        TINYINT(1) NOT NULL,
+  attempts      INT NOT NULL DEFAULT 1,
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_mqa (student_id, quiz_id),
+  FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (quiz_id) REFERENCES module_quizzes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ----------------------------------------------------------------------------

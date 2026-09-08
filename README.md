@@ -22,9 +22,11 @@ admin-managed test module with auto-grading for coding tracks.
 | Layer | What it does |
 |-------|--------------|
 | **1. Access** | Separate login for students (roll number + password) and admin (restricted) |
-| **2. Course delivery** | Catalog of 8 tracks, text lessons with code snippets, per-module progress tracker |
-| **3. Test module** | Test bank (I/O pairs for coding tracks, MCQ/short-answer for the rest), per-student one-time time-limited access code gate, sandboxed judge engine |
-| **4. Admin panel** | Content CRUD, test creator + access-code export, progress & score reports |
+| **2. Course delivery** | Catalog of 8 tracks, text lessons with code snippets, per-module progress tracker, and a per-module *"check your understanding"* MCQ quiz (retakeable, immediate feedback; passing marks the module complete) |
+| **3. Test module** | A **separate** admin-managed component: test bank (I/O pairs for coding tracks, MCQ/short-answer for the rest), per-student one-time time-limited access-code gate, sandboxed judge engine |
+| **4. Admin panel** | Content CRUD (incl. module quiz questions), test creator + access-code export, and progress / module-quiz / test-score reports |
+
+> **Two kinds of assessment.** *Module quizzes* live with the course content — short self-checks, no gate, take them anytime. *Tests* are the formal, code-gated exams the admin builds and unlocks per student. They are different tables, different screens, different UI sections.
 
 ## Stack
 
@@ -60,8 +62,9 @@ docker compose up -d
 # 2. Load the schema and seed data (--default-character-set keeps UTF-8 intact)
 MYSQL="docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 learning_platform"
 $MYSQL < db/schema.sql
-$MYSQL < db/seed.sql            # 8 tracks + a little sample content
-$MYSQL < db/seed_c_track.sql    # full C track: 10 modules, 20 lessons, 6 auto-graded quizzes
+$MYSQL < db/seed.sql                    # 8 tracks + a little sample content
+$MYSQL < db/seed_c_track.sql           # full C track: 10 modules, 20 lessons, 6 code assessments
+$MYSQL < db/seed_c_module_quizzes.sql  # per-module "check your understanding" quizzes (50 MCQs)
 
 # 3. Backend
 cd backend

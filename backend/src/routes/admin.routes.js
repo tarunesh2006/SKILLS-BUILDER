@@ -122,6 +122,114 @@ router.delete('/lessons/:id', asyncHandler(async (req, res) => {
 }));
 
 /* ========================================================================== *
+ *  Module "check your understanding" quizzes (part of course delivery)
+ * ========================================================================== */
+
+const mqMetaSchema = z.object({
+  title: z.string().trim().min(1).max(160).optional(),
+  passPercent: z.coerce.number().int().min(0).max(100).optional(),
+  isPublished: z.boolean().optional(),
+});
+const mqQuestionSchema = z.object({
+  promptMd: z.string().min(1).max(1_000_000),
+  type: z.enum(['mcq', 'multi']).default('mcq'),
+  explanationMd: z.string().max(8000).optional(),
+  sortOrder: z.coerce.number().int().default(0),
+  options: z.array(z.object({
+    label: z.string().min(1).max(600),
+    isCorrect: z.boolean().default(false),
+    sortOrder: z.coerce.number().int().default(0),
+  })).min(2),
+});
+
+// GET /admin/modules/:moduleId/quiz — full quiz incl. correct answers
+router.get('/modules/:moduleId/quiz', asyncHandler(async (req, res) => {
+  const quiz = await db.one(
+    `SELECT * FROM module_quizzes WHERE module_id = :m`, { m: req.params.moduleId },
+  );
+  if (!quiz) return res.json({ quiz: null });
+  const questions = await db.query(
+    `SELECT * FROM module_quiz_questions WHERE quiz_id = :q ORDER BY sort_order, id`,
+    { q: quiz.id },
+  );
+  const opts = questions.length
+    ? await db.query(
+      `SELECT * FROM module_quiz_options WHERE question_id IN (${questions.map(() => '?').join(',')}) ORDER BY sort_order, id`,
+      questions.map((q) => q.id),
+    )
+    : [];
+  res.json({
+    quiz: {
+      ...quiz,
+      questions: questions.map((q) => ({
+        ...q, options: opts.filter((o) => o.question_id === q.id),
+      })),
+    },
+  });
+}));
+
+// PUT /admin/modules/:moduleId/quiz — create or update quiz metadata
+router.put('/modules/:moduleId/quiz', body(mqMetaSchema), asyncHandler(async (req, res) => {
+  const mod = await db.one(`SELECT id FROM modules WHERE id = :id`, { id: req.params.moduleId });
+  if (!mod) throw notFound('Module not found');
+  const { title = 'Check Your Understanding', passPercent = 70, isPublished = true } = req.body;
+  await db.query(
+    `INSERT INTO module_quizzes (module_id, title, pass_percent, is_published)
+     VALUES (:m, :title, :pp, :pub)
+     ON DUPLICATE KEY UPDATE title = VALUES(title),
+       pass_percent = VALUES(pass_percent), is_published = VALUES(is_published)`,
+    { m: req.params.moduleId, title, pp: passPercent, pub: isPublished ? 1 : 0 },
+  );
+  const quiz = await db.one(`SELECT * FROM module_quizzes WHERE module_id = :m`, { m: req.params.moduleId });
+  res.json({ quiz });
+}));
+
+// POST /admin/modules/:moduleId/quiz/questions — add a question + its options
+router.post('/modules/:moduleId/quiz/questions', body(mqQuestionSchema), asyncHandler(async (req, res) => {
+  const q = req.body;
+  if (!q.options.some((o) => o.isCorrect)) throw badRequest('Mark at least one option correct');
+  if (q.type === 'mcq' && q.options.filter((o) => o.isCorrect).length !== 1) {
+    throw badRequest('An mcq question needs exactly one correct option');
+  }
+  const id = await db.transaction(async (conn) => {
+    let [quiz] = await conn.execute(
+      `SELECT id FROM module_quizzes WHERE module_id = :m`, { m: req.params.moduleId },
+    );
+    let quizId = quiz[0] && quiz[0].id;
+    if (!quizId) {
+      const [ins] = await conn.execute(
+        `INSERT INTO module_quizzes (module_id) VALUES (:m)`, { m: req.params.moduleId },
+      );
+      quizId = ins.insertId;
+    }
+    const [qi] = await conn.execute(
+      `INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+       VALUES (:qid, :prompt, :type, :expl, :sort)`,
+      {
+        qid: quizId, prompt: q.promptMd, type: q.type,
+        expl: q.explanationMd ?? null, sort: q.sortOrder,
+      },
+    );
+    for (const o of q.options) {
+      // eslint-disable-next-line no-await-in-loop
+      await conn.execute(
+        `INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order)
+         VALUES (:q, :label, :correct, :sort)`,
+        { q: qi.insertId, label: o.label, correct: o.isCorrect ? 1 : 0, sort: o.sortOrder },
+      );
+    }
+    return qi.insertId;
+  });
+  res.status(201).json({ id });
+}));
+
+router.delete('/quiz-questions/:id', asyncHandler(async (req, res) => {
+  const r = await db.query(`DELETE FROM module_quiz_questions WHERE id = :id`, { id: req.params.id });
+  if (r.affectedRows === 0) throw notFound('Question not found');
+  res.json({ ok: true });
+}));
+
+/* ========================================================================== *
  *  Test creator — build the test bank, set validity window
  * ========================================================================== */
 
@@ -383,6 +491,29 @@ router.get('/reports/scores', asyncHandler(async (req, res) => {
        JOIN tracks tr ON tr.id = t.track_id
       WHERE ${where.join(' AND ')}
       ORDER BY s.submitted_at DESC`,
+    params,
+  );
+  res.json({ rows });
+}));
+
+// GET /admin/reports/module-quizzes -> per-student module quiz results
+router.get('/reports/module-quizzes', asyncHandler(async (req, res) => {
+  const { studentId, trackId } = req.query;
+  const where = [];
+  const params = {};
+  if (studentId) { where.push('a.student_id = :studentId'); params.studentId = studentId; }
+  if (trackId) { where.push('m.track_id = :trackId'); params.trackId = trackId; }
+  const rows = await db.query(
+    `SELECT u.roll_number, u.full_name, tr.title AS track_title,
+            m.title AS module_title, q.title AS quiz_title,
+            a.score, a.max_score, a.percent, a.passed, a.attempts, a.updated_at
+       FROM module_quiz_attempts a
+       JOIN users u ON u.id = a.student_id
+       JOIN module_quizzes q ON q.id = a.quiz_id
+       JOIN modules m ON m.id = q.module_id
+       JOIN tracks tr ON tr.id = m.track_id
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY u.full_name, tr.title, m.sort_order`,
     params,
   );
   res.json({ rows });

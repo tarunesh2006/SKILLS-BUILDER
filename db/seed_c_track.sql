@@ -1,10 +1,10 @@
 -- ============================================================================
---  C Programming track - full content + quizzes
+--  C Programming track - full content + assessments
 --  Source: "C Programming Technical Training Syllabus (40 Hours)", 2026-2027
 --          (Final year CSE / AI&DS - beginner to placement-oriented)
 --
 --  Loads 10 modules with text lessons (code snippets inline) and 6 auto-graded
---  coding quizzes covering the syllabus checkpoints. Every quiz question is a
+--  coding assessments (the separate Test module) covering the syllabus checkpoints. Each
 --  stdin -> stdout problem graded by the Piston judge.
 --
 --  RE-RUNNABLE: it first deletes existing modules and tests for the C track,
@@ -672,14 +672,14 @@ single element.', 2
 FROM modules WHERE track_id = @c AND title = 'Module 10: Integrated Practice and Evaluation';
 
 -- ============================================================================
---  QUIZZES  (auto-graded coding problems: stdin -> stdout)
+--  ASSESSMENTS  (Test module - auto-graded coding problems: stdin -> stdout)
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
---  Quiz 1 - Basics, I/O and Operators   (Modules 1-2)
+--  Assessment 1 - Basics, I/O and Operators   (Modules 1-2)
 -- ---------------------------------------------------------------------------
 INSERT INTO tests (track_id, title, instructions, duration_minutes, is_published, created_by)
-VALUES (@c, 'C Quiz 1: Basics, I/O and Operators',
+VALUES (@c, 'C Assessment 1: Basics, I/O and Operators',
 'Three problems. Each reads from standard input and prints the exact output shown. Do not print extra text.',
 30, 1, @admin);
 SET @t := LAST_INSERT_ID();
@@ -729,10 +729,10 @@ INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort
 (@i, '100000', '1', 0, 1, 3);
 
 -- ---------------------------------------------------------------------------
---  Quiz 2 - Decision Making   (Module 3)
+--  Assessment 2 - Decision Making   (Module 3)
 -- ---------------------------------------------------------------------------
 INSERT INTO tests (track_id, title, instructions, duration_minutes, is_published, created_by)
-VALUES (@c, 'C Quiz 2: Decision Making',
+VALUES (@c, 'C Assessment 2: Decision Making',
 'Conditionals. Match the output format exactly (case-sensitive).',
 30, 1, @admin);
 SET @t := LAST_INSERT_ID();
@@ -784,10 +784,10 @@ INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort
 (@i, '12', 'F', 0, 1, 5);
 
 -- ---------------------------------------------------------------------------
---  Quiz 3 - Loops and Patterns   (Module 4)
+--  Assessment 3 - Loops and Patterns   (Module 4)
 -- ---------------------------------------------------------------------------
 INSERT INTO tests (track_id, title, instructions, duration_minutes, is_published, created_by)
-VALUES (@c, 'C Quiz 3: Loops and Patterns',
+VALUES (@c, 'C Assessment 3: Loops and Patterns',
 'Loop logic and pattern printing. Trailing spaces and a trailing newline are ignored by the grader.',
 35, 1, @admin);
 SET @t := LAST_INSERT_ID();
@@ -842,10 +842,10 @@ INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort
 *****', 0, 1, 3);
 
 -- ---------------------------------------------------------------------------
---  Quiz 4 - Functions and Recursion   (Module 5)
+--  Assessment 4 - Functions and Recursion   (Module 5)
 -- ---------------------------------------------------------------------------
 INSERT INTO tests (track_id, title, instructions, duration_minutes, is_published, created_by)
-VALUES (@c, 'C Quiz 4: Functions and Recursion',
+VALUES (@c, 'C Assessment 4: Functions and Recursion',
 'Write a helper function for each task, then call it from main.',
 35, 1, @admin);
 SET @t := LAST_INSERT_ID();
@@ -890,10 +890,10 @@ INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort
 (@i, '36 24', '12', 0, 1, 4);
 
 -- ---------------------------------------------------------------------------
---  Quiz 5 - Arrays and Strings   (Modules 6-7)
+--  Assessment 5 - Arrays and Strings   (Modules 6-7)
 -- ---------------------------------------------------------------------------
 INSERT INTO tests (track_id, title, instructions, duration_minutes, is_published, created_by)
-VALUES (@c, 'C Quiz 5: Arrays and Strings',
+VALUES (@c, 'C Assessment 5: Arrays and Strings',
 'Array aggregates and string logic. Read the input format for each problem carefully.',
 40, 1, @admin);
 SET @t := LAST_INSERT_ID();
@@ -952,10 +952,10 @@ INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort
 (@i, 'a', 'YES', 0, 1, 4);
 
 -- ---------------------------------------------------------------------------
---  Quiz 6 - Pointers, Structures and Final Assessment   (Modules 8-10)
+--  Assessment 6 - Pointers, Structures and Final Assessment   (Modules 8-10)
 -- ---------------------------------------------------------------------------
 INSERT INTO tests (track_id, title, instructions, duration_minutes, is_published, created_by)
-VALUES (@c, 'C Quiz 6: Pointers, Structures and Final Assessment',
+VALUES (@c, 'C Assessment 6: Pointers, Structures and Final Assessment',
 'Placement-style checkpoint covering pointers, structures and mixed problem solving.',
 45, 1, @admin);
 SET @t := LAST_INSERT_ID();
@@ -1055,7 +1055,7 @@ SELECT
   (SELECT COUNT(*) FROM modules WHERE track_id = @c)                           AS modules,
   (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id
      WHERE m.track_id = @c)                                                    AS lessons,
-  (SELECT COUNT(*) FROM tests WHERE track_id = @c)                             AS quizzes,
+  (SELECT COUNT(*) FROM tests WHERE track_id = @c)                             AS assessments,
   (SELECT COUNT(*) FROM test_items ti JOIN tests te ON te.id = ti.test_id
      WHERE te.track_id = @c)                                                   AS questions,
   (SELECT COUNT(*) FROM test_cases tc JOIN test_items ti ON ti.id = tc.item_id
