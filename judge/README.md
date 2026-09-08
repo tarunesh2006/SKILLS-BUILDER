@@ -13,23 +13,32 @@ docker compose up -d piston
 
 ## Install language runtimes (one-time)
 
-Piston ships with no languages installed. Install the four this platform uses:
+Piston ships with no languages installed. C **and** C++ both come from the
+single `gcc` package; Java and Python are their own. Install the three
+packages this platform needs:
 
 ```bash
-curl -s http://localhost:2000/api/v2/packages           # list available
-for lang in c cpp java python; do
-  case $lang in
-    c)      pkg='{"language":"c","version":"*"}';;
-    cpp)    pkg='{"language":"c++","version":"*"}';;
-    java)   pkg='{"language":"java","version":"*"}';;
-    python) pkg='{"language":"python","version":"*"}';;
-  esac
-  curl -s -XPOST http://localhost:2000/api/v2/packages -H 'Content-Type: application/json' -d "$pkg"
+curl -s http://localhost:2000/api/v2/packages           # list available versions
+
+for pkg in \
+  '{"language":"python","version":"3.12.0"}' \
+  '{"language":"java","version":"15.0.2"}' \
+  '{"language":"gcc","version":"10.2.0"}'; do
+  curl -s -XPOST http://localhost:2000/api/v2/packages \
+    -H 'Content-Type: application/json' -d "$pkg"
 done
+
+curl -s http://localhost:2000/api/v2/runtimes           # confirm: python, java, c, c++
 ```
 
-(You can pin exact versions instead of `*` — update `LANG` in
-`backend/src/services/judge.service.js` to match.)
+Downloads come from GitHub release assets. If a download hangs or the
+container crashes mid-install, it's usually one bad IP in GitHub's Fastly
+anycast set — the `dns:` and `extra_hosts:` pins in the root
+`docker-compose.yml` work around it. Just re-run the install.
+
+The `execute` API takes the language name (`c`, `c++`, `java`, `python`) —
+only package *installs* use `gcc`. `judge.service.js` already maps our
+`tracks.judge_language` values to the right runtime.
 
 ## Isolation notes
 

@@ -243,8 +243,8 @@ SELECT
   t.slug                            AS track_slug,
   t.title                           AS track_title,
   COUNT(m.id)                       AS modules_total,
-  SUM(p.status = 'completed')       AS modules_completed,
-  ROUND(100 * SUM(p.status = 'completed') / NULLIF(COUNT(m.id), 0), 1) AS percent_complete
+  COALESCE(SUM(p.status = 'completed'), 0) AS modules_completed,
+  ROUND(100 * COALESCE(SUM(p.status = 'completed'), 0) / NULLIF(COUNT(m.id), 0), 1) AS percent_complete
 FROM users u
 CROSS JOIN tracks t
 JOIN modules m ON m.track_id = t.id AND m.is_published = 1

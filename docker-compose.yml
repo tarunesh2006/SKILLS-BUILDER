@@ -27,12 +27,27 @@ services:
     privileged: true          # required for Piston's nsjail isolation
     ports:
       - "2000:2000"
+    environment:
+      # Piston caps per-request run_timeout/compile_timeout at these values.
+      # Defaults (3s / 10s) reject the backend's requests, so widen them.
+      PISTON_RUN_TIMEOUT: "8000"
+      PISTON_COMPILE_TIMEOUT: "15000"
+      PISTON_RUN_MEMORY_LIMIT: "134217728"   # 128 MiB
     # Docker Desktop's embedded resolver can hand back NAT64 AAAA-only records
     # that don't route, breaking Piston's runtime downloads from GitHub. Pin
     # public IPv4 resolvers so package installs work.
     dns:
       - 1.1.1.1
       - 8.8.8.8
+    # One of GitHub's Fastly asset IPs (185.199.109.133) blackholes on some
+    # networks; Piston crashes when a runtime download lands on it. Pin the
+    # asset hosts to a reachable IP from that same anycast set.
+    extra_hosts:
+      - "github.com:140.82.113.3"
+      - "codeload.github.com:140.82.113.9"
+      - "objects.githubusercontent.com:185.199.110.133"
+      - "release-assets.githubusercontent.com:185.199.110.133"
+      - "raw.githubusercontent.com:185.199.110.133"
     volumes:
       - piston-packages:/piston/packages
     tmpfs:
