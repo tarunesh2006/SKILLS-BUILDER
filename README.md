@@ -88,11 +88,12 @@ done
 
 ### Default seed accounts
 
-| Role | Login | Password |
-|------|-------|----------|
-| Admin | `admin` | `admin123` |
-| Student | roll `S001` | `student123` |
+| Role | Sign in with | Password |
+|------|--------------|----------|
+| Admin | username `admin` | `admin123` |
+| Student | email `asha@example.edu` (or roll `S001`) | `student123` |
 
+Students authenticate by university email or roll number; admins by username.
 Change these before any real deployment.
 
 ---

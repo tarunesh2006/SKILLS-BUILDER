@@ -1,4 +1,4 @@
-import { NavLink, Navigate } from 'react-router-dom';
+import { NavLink, Navigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuth } from '../context/AuthContext';
@@ -47,12 +47,19 @@ export function RequireAuth({ role, children }) {
   return children;
 }
 
+const NO_CHROME = ['/login', '/admin/login'];
+
 export function TopBar() {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
   const isAdmin = user?.role === 'admin';
+
+  // The sign-in screen is a full-bleed layout with its own branding.
+  if (NO_CHROME.includes(pathname)) return null;
+
   return (
     <header className="topbar">
-      <div className="brand">Learning Platform</div>
+      <div className="brand">Skill Builder</div>
       <nav>
         {user && !isAdmin && (
           <>

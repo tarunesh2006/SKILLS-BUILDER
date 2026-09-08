@@ -8,9 +8,14 @@ const { signToken, authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Students sign in with their university email or their roll number.
 const studentLogin = z.object({
-  rollNumber: z.string().trim().min(1).max(32),
+  email: z.string().trim().toLowerCase().email().max(190).optional(),
+  rollNumber: z.string().trim().min(1).max(32).optional(),
   password: z.string().min(1).max(200),
+}).refine((d) => d.email || d.rollNumber, {
+  message: 'Provide an email address or a roll number',
+  path: ['email'],
 });
 const adminLogin = z.object({
   username: z.string().trim().min(1).max(64),
@@ -35,15 +40,19 @@ function publicUser(u) {
   };
 }
 
-// Student login: roll number + password
+// Student login: university email (or roll number) + password
 router.post(
   '/student/login',
   body(studentLogin),
   asyncHandler(async (req, res) => {
+    const { email, rollNumber, password } = req.body;
+    const [column, value] = email
+      ? ['email', email]
+      : ['roll_number', rollNumber];
     const user = await authenticateUser(
-      `role = 'student' AND roll_number = :roll`,
-      { roll: req.body.rollNumber },
-      req.body.password,
+      `role = 'student' AND ${column} = :value`,
+      { value },
+      password,
     );
     res.json({ token: signToken(user), user: publicUser(user) });
   }),

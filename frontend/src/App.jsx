@@ -29,8 +29,8 @@ export default function App() {
       <TopBar />
       <Routes>
         <Route path="/" element={<HomeRedirect />} />
-        <Route path="/login" element={<Login kind="student" />} />
-        <Route path="/admin/login" element={<Login kind="admin" />} />
+        <Route path="/login" element={<Login defaultRole="student" />} />
+        <Route path="/admin/login" element={<Login defaultRole="admin" />} />
 
         {/* Student */}
         <Route path="/catalog" element={<RequireAuth role="student"><Catalog /></RequireAuth>} />
