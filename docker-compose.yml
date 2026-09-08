@@ -27,6 +27,12 @@ services:
     privileged: true          # required for Piston's nsjail isolation
     ports:
       - "2000:2000"
+    # Docker Desktop's embedded resolver can hand back NAT64 AAAA-only records
+    # that don't route, breaking Piston's runtime downloads from GitHub. Pin
+    # public IPv4 resolvers so package installs work.
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     volumes:
       - piston-packages:/piston/packages
     tmpfs:
