@@ -57,20 +57,30 @@ Prerequisites: **Node.js 20+**, **Docker + Docker Compose**.
 # 1. Start MySQL + the Piston judge sandbox
 docker compose up -d
 
-# 2. Load the schema and seed data
-docker compose exec -T mysql mysql -uroot -proot learning_platform < db/schema.sql
-docker compose exec -T mysql mysql -uroot -proot learning_platform < db/seed.sql
+# 2. Load the schema and seed data (--default-character-set keeps UTF-8 intact)
+MYSQL="docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 learning_platform"
+$MYSQL < db/schema.sql
+$MYSQL < db/seed.sql            # 8 tracks + a little sample content
+$MYSQL < db/seed_c_track.sql    # full C track: 10 modules, 20 lessons, 6 auto-graded quizzes
 
 # 3. Backend
 cd backend
 cp .env.example .env
 npm install
+npm run seed           # admin + demo students (hashed passwords)
 npm run dev            # http://localhost:4000
 
 # 4. Frontend
 cd ../frontend
 npm install
 npm run dev            # http://localhost:5173
+
+# 5. Install the judge runtimes (one-time) — see judge/README.md
+for p in '{"language":"python","version":"3.12.0"}' \
+         '{"language":"java","version":"15.0.2"}' \
+         '{"language":"gcc","version":"10.2.0"}'; do
+  curl -s -XPOST http://localhost:2000/api/v2/packages -H 'Content-Type: application/json' -d "$p"
+done
 ```
 
 ### Default seed accounts

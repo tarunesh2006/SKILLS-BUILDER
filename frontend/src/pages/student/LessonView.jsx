@@ -9,12 +9,19 @@ export default function LessonView() {
   if (loading) return <Spinner />;
   if (error) return <div className="container"><ErrorText error={error} /></div>;
 
+  // Lesson bodies conventionally open with their own `# Title` heading; drop a
+  // leading H1 that just repeats the lesson title so it isn't shown twice.
+  const body = String(data.lesson.body_md || '').replace(
+    /^\s*#\s+(.+?)\s*\n+/,
+    (m, h) => (h.trim().toLowerCase() === data.lesson.title.trim().toLowerCase() ? '' : m),
+  );
+
   return (
     <div className="container">
       <p className="muted"><a href="#" onClick={(e) => { e.preventDefault(); navigate(-1); }}>← Back</a></p>
       <div className="card">
         <h1>{data.lesson.title}</h1>
-        <Markdown>{data.lesson.body_md}</Markdown>
+        <Markdown>{body}</Markdown>
       </div>
     </div>
   );

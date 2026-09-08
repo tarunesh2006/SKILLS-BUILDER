@@ -53,7 +53,7 @@ INSERT INTO modules (track_id, title, summary, sort_order)
 SELECT id, 'The OSI Model', 'Seven layers and what each one does.', 1 FROM tracks WHERE slug = 'networking';
 
 INSERT INTO lessons (module_id, title, body_md, sort_order)
-SELECT m.id, 'Layers 1–4',
+SELECT m.id, 'Layers 1-4',
 '# The Lower Layers
 
 | Layer | Name | Example |

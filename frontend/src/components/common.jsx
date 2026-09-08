@@ -1,5 +1,6 @@
 import { NavLink, Navigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuth } from '../context/AuthContext';
 
 export function Spinner({ label = 'Loading…' }) {
@@ -12,7 +13,11 @@ export function ErrorText({ error }) {
 }
 
 export function Markdown({ children }) {
-  return <div className="markdown"><ReactMarkdown>{children || ''}</ReactMarkdown></div>;
+  return (
+    <div className="markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children || ''}</ReactMarkdown>
+    </div>
+  );
 }
 
 export function ProgressBar({ percent }) {
