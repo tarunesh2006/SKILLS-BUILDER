@@ -4,11 +4,15 @@
   --border: #e2e5ea;
   --text: #1f2430;
   --muted: #6b7280;
-  --accent: #2f6fed;
-  --accent-weak: #e8f0fe;
+  --accent: #1592d6;
+  --accent-weak: #e6f4fc;
   --ok: #1a7f37;
   --warn: #b26a00;
   --err: #c0362c;
+  /* Skill Builder brand */
+  --brand: #1aa3e8;
+  --navy: #0c1f33;
+  --navy-2: #0a1a2b;
   color-scheme: light;
 }
 * { box-sizing: border-box; }

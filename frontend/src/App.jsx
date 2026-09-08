@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { TopBar, RequireAuth } from './components/common';
+import { RequireAuth } from './components/common';
+import SiteHeader from './components/SiteHeader';
 import { useAuth } from './context/AuthContext';
 
 import Login from './pages/Login';
-import Catalog from './pages/student/Catalog';
+import Home from './pages/student/Home';
 import TrackView from './pages/student/TrackView';
 import LessonView from './pages/student/LessonView';
 import ModuleQuiz from './pages/student/ModuleQuiz';
@@ -26,14 +27,14 @@ function HomeRedirect() {
 export default function App() {
   return (
     <>
-      <TopBar />
+      <SiteHeader />
       <Routes>
         <Route path="/" element={<HomeRedirect />} />
-        <Route path="/login" element={<Login defaultRole="student" />} />
-        <Route path="/admin/login" element={<Login defaultRole="admin" />} />
+        <Route path="/login" element={<Login key="student-login" defaultRole="student" />} />
+        <Route path="/admin/login" element={<Login key="admin-login" defaultRole="admin" />} />
 
         {/* Student */}
-        <Route path="/catalog" element={<RequireAuth role="student"><Catalog /></RequireAuth>} />
+        <Route path="/catalog" element={<RequireAuth role="student"><Home /></RequireAuth>} />
         <Route path="/tracks/:slug" element={<RequireAuth role="student"><TrackView /></RequireAuth>} />
         <Route path="/tracks/:slug/modules/:moduleId/quiz" element={<RequireAuth role="student"><ModuleQuiz /></RequireAuth>} />
         <Route path="/lessons/:id" element={<RequireAuth role="student"><LessonView /></RequireAuth>} />

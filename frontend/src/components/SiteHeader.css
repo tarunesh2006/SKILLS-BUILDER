@@ -1,0 +1,155 @@
+/* ── Skill Builder app header (dark) ────────────────────────────────────── */
+.sh {
+  --sh-cyan: #22a7e6;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #0c2136;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #d7e3ee;
+}
+
+.sh-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 24px;
+}
+
+.sh-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sh-logo__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--sh-cyan);
+  color: #06263a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sh-nav {
+  display: flex;
+  gap: 22px;
+  margin-right: auto;
+}
+.sh-nav a {
+  color: #9fb4c6;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+}
+.sh-nav a:hover { color: #eaf2f9; }
+.sh-nav a.active { color: #fff; border-bottom-color: var(--sh-cyan); }
+
+/* profile */
+.sh-profile { position: relative; }
+.sh-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(150deg, #1f6ea1, #123f5e);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sh-avatar:hover { border-color: var(--sh-cyan); }
+
+.sh-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 220px;
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(6, 20, 33, 0.28);
+  padding: 6px;
+  overflow: hidden;
+}
+.sh-menu__head {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.sh-menu__head strong { display: block; font-size: 14px; }
+.sh-menu__head span { display: block; font-size: 12px; color: var(--muted); word-break: break-all; }
+.sh-menu a,
+.sh-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.sh-menu a:hover,
+.sh-menu button:hover { background: var(--accent-weak); }
+.sh-menu button.sh-signout { color: var(--err); }
+
+/* track strip */
+.sh-tracks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sh-tracks::-webkit-scrollbar { display: none; }
+.sh-tracks__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #6f8699;
+  margin-right: 6px;
+}
+.sh-chip {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b9c9d7;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+}
+.sh-chip:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.sh-chip.active {
+  background: var(--sh-cyan);
+  color: #06263a;
+}
+
+@media (max-width: 720px) {
+  .sh-nav { display: none; }
+  .sh-bar { gap: 14px; }
+}
