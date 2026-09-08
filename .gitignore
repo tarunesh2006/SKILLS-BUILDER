@@ -10,5 +10,8 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Claude Code per-developer local settings
+.claude/settings.local.json
 *.sqlite
 mysql-data/
