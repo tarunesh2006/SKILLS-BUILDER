@@ -1,6 +1,5 @@
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useFetch } from '../useApi';
-import { api } from '../../api/client';
 import { Spinner, ErrorText } from '../../components/common';
 import './TrackView.css';
 
@@ -26,15 +25,18 @@ const TAGLINES = {
 
 const shortTitle = (t) => t.replace(/^Module\s+\d+:\s*/i, '');
 
-const Check = () => (
-  <svg className="tv-check" width="16" height="16" viewBox="0 0 24 24" fill="none"
+const Check = ({ className = 'tv-check' }) => (
+  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
 
-function ModulePane({ track, slug, module: m, index, total, onNav, onStatus }) {
+function ModulePane({ track, slug, module: m, index, total, onNav }) {
   const done = m.progress.status === 'completed';
+  const lessonsDone = m.lessonsTotal > 0 && m.lessonsViewed >= m.lessonsTotal;
+  const quizDone = !m.quiz || m.quizPassed;
+
   return (
     <div>
       <div className="tv-headrow">
@@ -43,35 +45,54 @@ function ModulePane({ track, slug, module: m, index, total, onNav, onStatus }) {
           <h1>{shortTitle(m.title)}</h1>
           {m.summary && <p className="tv-lede">{m.summary}</p>}
         </div>
-        {done
-          ? <span className="tv-open" style={{ borderColor: '#3ac07b', color: '#8fe3b4' }}>Completed ✓</span>
-          : null}
+        <span className={`tv-status ${done ? 'is-done' : ''}`}>
+          {done ? 'Completed ✓' : 'In progress'}
+        </span>
       </div>
+
+      {!done && (
+        <p className="tv-gate">
+          This module completes automatically once you&apos;ve opened every lesson
+          {m.quiz ? ' and passed the quiz.' : '.'}
+        </p>
+      )}
 
       {m.lessons.length > 0 && (
         <ul className="tv-lessons">
           {m.lessons.map((l) => (
-            <li key={l.id}><Link to={`/lessons/${l.id}`}>{l.title}</Link></li>
+            <li key={l.id}>
+              <Link to={`/lessons/${l.id}`} className={l.viewed ? 'is-viewed' : ''}>
+                <span className="tv-lesson-mark">{l.viewed ? <Check className="tv-check-sm" /> : ''}</span>
+                {l.title}
+              </Link>
+            </li>
           ))}
         </ul>
       )}
 
-      <div className="tv-actions">
-        {m.quiz && m.quiz.questionCount > 0 && (
-          <>
-            <Link className="tv-btn tv-btn--ghost" to={`/tracks/${slug}/modules/${m.id}/quiz`}>
-              {m.quiz.attempt ? 'Retake' : 'Take'} the module quiz
-            </Link>
-            <span className="tv-hint">
-              {m.quiz.questionCount} questions · pass {m.quiz.passPercent}%
-              {m.quiz.attempt && ` · last ${m.quiz.attempt.percent}%`}
-            </span>
-          </>
+      <div className="tv-reqs">
+        <span className={lessonsDone ? 'is-met' : ''}>
+          {lessonsDone ? '✓' : '○'} Lessons {m.lessonsViewed}/{m.lessonsTotal}
+        </span>
+        {m.quiz && (
+          <span className={quizDone ? 'is-met' : ''}>
+            {quizDone ? '✓' : '○'} Quiz {m.quizPassed
+              ? `passed (${m.quiz.attempt.percent}%)`
+              : m.quiz.attempt
+                ? `last ${m.quiz.attempt.percent}% — need ${m.quiz.passPercent}%`
+                : `not attempted — need ${m.quiz.passPercent}%`}
+          </span>
         )}
-        {done
-          ? <button className="tv-btn tv-btn--ghost" onClick={() => onStatus(m.id, 'in_progress')}>Reopen module</button>
-          : <button className="tv-btn" onClick={() => onStatus(m.id, 'completed')}>Mark module complete</button>}
       </div>
+
+      {m.quiz && m.quiz.questionCount > 0 && (
+        <div className="tv-actions">
+          <Link className="tv-btn" to={`/tracks/${slug}/modules/${m.id}/quiz`}>
+            {m.quiz.attempt ? 'Retake' : 'Take'} the module quiz
+            <span className="tv-hint"> · {m.quiz.questionCount} questions</span>
+          </Link>
+        </div>
+      )}
 
       <div className="tv-nav">
         <button disabled={index === 0} onClick={() => onNav(index - 1)}>← Previous module</button>
@@ -109,7 +130,7 @@ export default function TrackView() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { data, error, loading, reload } = useFetch(`/catalog/${slug}`, [slug]);
+  const { data, error, loading } = useFetch(`/catalog/${slug}`, [slug]);
 
   if (loading) return <Spinner />;
   if (error) return <div className="container"><ErrorText error={error} /></div>;
@@ -120,11 +141,6 @@ export default function TrackView() {
   const selected = selectedIndex >= 0 ? modules[selectedIndex] : null;
 
   const select = (moduleId) => setParams(moduleId ? { m: String(moduleId) } : {});
-
-  async function setStatus(moduleId, status) {
-    await api(`/progress/modules/${moduleId}`, { method: 'PUT', body: { status } });
-    reload();
-  }
 
   return (
     <div className="tv">
@@ -143,17 +159,15 @@ export default function TrackView() {
             <ol>
               {modules.map((m, i) => {
                 const done = m.progress.status === 'completed';
+                const active = selected?.id === m.id;
                 return (
                   <li key={m.id}>
-                    <button
-                      className={selected?.id === m.id ? 'active' : ''}
-                      onClick={() => select(m.id)}
-                    >
+                    <button className={active ? 'active' : ''} onClick={() => select(m.id)}>
                       <span className={`tv-num${done ? ' tv-num--done' : ''}`}>
                         {done ? '✓' : String(i + 1).padStart(2, '0')}
                       </span>
                       <span className="tv-mod-title">{shortTitle(m.title)}</span>
-                      {done && selected?.id !== m.id && <Check />}
+                      {m.progress.status === 'in_progress' && !active && <span className="tv-dot" />}
                     </button>
                   </li>
                 );
@@ -170,7 +184,6 @@ export default function TrackView() {
                 index={selectedIndex}
                 total={modules.length}
                 onNav={(i) => select(modules[i].id)}
-                onStatus={setStatus}
               />
             ) : (
               <TrackIntro

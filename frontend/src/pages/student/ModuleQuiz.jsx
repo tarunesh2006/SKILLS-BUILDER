@@ -64,22 +64,35 @@ export default function ModuleQuiz() {
 
   return (
     <div className="container">
-      <p className="muted"><Link to={`/tracks/${slug}`}>← Back to modules</Link></p>
+      <p className="muted"><Link to={`/tracks/${slug}?m=${moduleId}`}>← Back to module</Link></p>
       <h1>{quiz.title}</h1>
 
       {result && (
-        <div className="card" style={{ background: result.passed ? '#e5f4ea' : '#fbe7e5' }}>
+        <div
+          className="card"
+          style={{
+            background: result.passed ? 'var(--ok-weak)' : 'var(--err-weak)',
+            borderColor: result.passed ? 'var(--ok)' : 'var(--err)',
+          }}
+        >
           <h2 style={{ margin: '0 0 4px' }}>
             {result.score} / {result.maxScore} &nbsp;({result.percent}%)
           </h2>
           <p style={{ margin: 0 }}>
             {result.passed
-              ? <><span className="badge ok">Passed</span> — this module is now marked complete.</>
+              ? (
+                <>
+                  <span className="badge ok">Passed</span>{' '}
+                  {result.moduleCompleted
+                    ? '— every lesson is done too, so this module is now complete.'
+                    : `— now open the ${result.lessonsRemaining} remaining lesson${result.lessonsRemaining === 1 ? '' : 's'} to finish the module.`}
+                </>
+              )
               : <><span className="badge err">Not passed</span> — you need {result.passPercent}%. Review the explanations and retake.</>}
           </p>
           <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
             <button className="secondary" onClick={retake}>Retake quiz</button>
-            <button onClick={() => navigate(`/tracks/${slug}`)}>Back to modules</button>
+            <button onClick={() => navigate(`/tracks/${slug}?m=${moduleId}`)}>Back to module</button>
           </div>
         </div>
       )}
@@ -114,8 +127,8 @@ export default function ModuleQuiz() {
                 const isKey = d && d.correctOptionIds.includes(o.id);
                 let bg;
                 if (d) {
-                  if (isKey) bg = '#e5f4ea';
-                  else if (isPicked) bg = '#fbe7e5';
+                  if (isKey) bg = 'var(--ok-weak)';
+                  else if (isPicked) bg = 'var(--err-weak)';
                 }
                 return (
                   <label

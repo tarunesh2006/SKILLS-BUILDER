@@ -5,6 +5,7 @@ const { asyncHandler, notFound } = require('../utils/http');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { body } = require('../utils/validate');
 const moduleQuiz = require('../services/moduleQuiz.service');
+const progressSvc = require('../services/progress.service');
 
 const router = express.Router();
 router.use(authenticate); // catalog is for logged-in students/admins
@@ -51,6 +52,7 @@ router.get(
 
     let progressByModule = {};
     let attemptByQuiz = {};
+    let viewed = new Set();
     if (req.user.role === 'student') {
       const rows = await db.query(
         `SELECT module_id, status, completed_at FROM progress WHERE student_id = :sid`,
@@ -67,6 +69,8 @@ router.get(
         { sid: req.user.id, tid: track.id },
       );
       attemptByQuiz = Object.fromEntries(attempts.map((a) => [a.quiz_id, a]));
+
+      viewed = await progressSvc.viewedLessonIds(req.user.id, track.id);
     }
 
     // one lightweight row per module quiz (id + question count), no answers
@@ -86,10 +90,16 @@ router.get(
       track,
       modules: modules.map((m) => {
         const q = quizByModule[m.id];
+        const mLessons = lessons.filter((l) => l.module_id === m.id).map((l) => ({
+          id: l.id, title: l.title, sort_order: l.sort_order, viewed: viewed.has(l.id),
+        }));
+        const quizAttempt = q ? attemptByQuiz[q.id] || null : null;
         return {
           ...m,
-          lessons: lessons.filter((l) => l.module_id === m.id)
-            .map(({ module_id, ...rest }) => rest),
+          lessons: mLessons,
+          lessonsViewed: mLessons.filter((l) => l.viewed).length,
+          lessonsTotal: mLessons.length,
+          quizPassed: !!(quizAttempt && quizAttempt.passed),
           progress: progressByModule[m.id] || { status: 'not_started' },
           quiz: q
             ? {
@@ -97,12 +107,24 @@ router.get(
               title: q.title,
               questionCount: Number(q.question_count),
               passPercent: q.pass_percent,
-              attempt: attemptByQuiz[q.id] || null,
+              attempt: quizAttempt,
             }
             : null,
         };
       }),
     });
+  }),
+);
+
+// POST /catalog/lessons/:id/view — record that the student opened this lesson
+router.post(
+  '/lessons/:id/view',
+  requireRole('student'),
+  asyncHandler(async (req, res) => {
+    const moduleId = await progressSvc.markLessonViewed(req.user.id, req.params.id);
+    if (!moduleId) throw notFound('Lesson not found');
+    const stats = await progressSvc.moduleCompletionStats(req.user.id, moduleId);
+    res.json({ moduleId, ...stats });
   }),
 );
 
@@ -145,18 +167,50 @@ router.post(
   }),
 );
 
-// GET /catalog/lessons/:id — a single lesson's markdown body
+// GET /catalog/lessons/:id — a lesson's body, its place in the module, and
+// prev/next lesson ids for in-module navigation
 router.get(
   '/lessons/:id',
   asyncHandler(async (req, res) => {
     const lesson = await db.one(
-      `SELECT l.id, l.module_id, l.title, l.body_md, m.track_id
-         FROM lessons l JOIN modules m ON m.id = l.module_id
+      `SELECT l.id, l.module_id, l.title, l.body_md, l.sort_order,
+              m.track_id, m.title AS module_title, t.slug AS track_slug, t.title AS track_title
+         FROM lessons l
+         JOIN modules m ON m.id = l.module_id
+         JOIN tracks  t ON t.id = m.track_id
         WHERE l.id = :id AND l.is_published = 1`,
       { id: req.params.id },
     );
     if (!lesson) throw notFound('Lesson not found');
-    res.json({ lesson });
+
+    const siblings = await db.query(
+      `SELECT id, title, sort_order FROM lessons
+        WHERE module_id = :mid AND is_published = 1
+        ORDER BY sort_order, id`,
+      { mid: lesson.module_id },
+    );
+    const idx = siblings.findIndex((s) => s.id === lesson.id);
+
+    let viewedIds = new Set();
+    if (req.user.role === 'student' && siblings.length) {
+      const rows = await db.query(
+        `SELECT lesson_id FROM lesson_views
+          WHERE student_id = ? AND lesson_id IN (${siblings.map(() => '?').join(',')})`,
+        [req.user.id, ...siblings.map((s) => s.id)],
+      );
+      viewedIds = new Set(rows.map((r) => r.lesson_id));
+    }
+
+    res.json({
+      lesson,
+      nav: {
+        index: idx,
+        total: siblings.length,
+        prevId: idx > 0 ? siblings[idx - 1].id : null,
+        nextId: idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1].id : null,
+        lessons: siblings.map((s) => ({ id: s.id, title: s.title, viewed: viewedIds.has(s.id) })),
+      },
+    });
   }),
 );
 

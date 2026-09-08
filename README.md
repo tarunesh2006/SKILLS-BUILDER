@@ -3,8 +3,10 @@
 A self-paced learning platform for students covering 8 tracks:
 **C, C++, Java, Python, MySQL, MongoDB, React, Networking.**
 
-Text-based lessons with code snippets, per-module progress tracking, and an
-admin-managed test module with auto-grading for coding tracks.
+Text-based lessons with code snippets, automatic per-module progress
+tracking (Cisco-style: a module completes once every lesson is opened and
+its quiz passed), and an admin-managed test module with auto-grading for
+coding tracks.
 
 > Reference model: Cisco Networking Academy's site architecture
 > (catalog → course content → progress tracking → admin-managed testing),
@@ -22,7 +24,7 @@ admin-managed test module with auto-grading for coding tracks.
 | Layer | What it does |
 |-------|--------------|
 | **1. Access** | Separate login for students (roll number + password) and admin (restricted) |
-| **2. Course delivery** | Catalog of 8 tracks, text lessons with code snippets, per-module progress tracker, and a per-module *"check your understanding"* MCQ quiz (retakeable, immediate feedback; passing marks the module complete) |
+| **2. Course delivery** | Catalog of 8 tracks, text lessons with code snippets, a per-module *"check your understanding"* MCQ quiz (retakeable, immediate feedback), and **automatic completion** — a module is marked complete once the student has opened every lesson in it *and* passed its quiz. No manual "mark complete". |
 | **3. Test module** | A **separate** admin-managed component: test bank (I/O pairs for coding tracks, MCQ/short-answer for the rest), per-student one-time time-limited access-code gate, sandboxed judge engine |
 | **4. Admin panel** | Content CRUD (incl. module quiz questions), test creator + access-code export, and progress / module-quiz / test-score reports |
 
@@ -63,8 +65,10 @@ docker compose up -d
 MYSQL="docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 learning_platform"
 $MYSQL < db/schema.sql
 $MYSQL < db/seed.sql                    # 8 tracks + a little sample content
-$MYSQL < db/seed_c_track.sql           # full C track: 10 modules, 20 lessons, 6 code assessments
+$MYSQL < db/seed_c_track.sql           # full C track: 10 modules, ~39 lessons, 6 code assessments
 $MYSQL < db/seed_c_module_quizzes.sql  # per-module "check your understanding" quizzes (50 MCQs)
+# (schema.sql already includes every table; the db/migrations/*.sql files are
+#  only for upgrading a database created before those features existed.)
 
 # 3. Backend
 cd backend

@@ -86,6 +86,7 @@
 .tv-num--done { background: rgba(40, 200, 100, 0.16); color: #58d98a; }
 .tv-mod-title { flex: 1; }
 .tv-check { flex: none; color: #58d98a; }
+.tv-dot { flex: none; width: 7px; height: 7px; border-radius: 999px; background: #ffc061; }
 
 /* content pane */
 .tv-main { padding: 34px 38px; }
@@ -126,6 +127,48 @@
 }
 .tv-open:hover { background: rgba(34, 167, 230, 0.16); color: #fff; }
 
+.tv-status {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffc061;
+  background: rgba(255, 192, 97, 0.14);
+}
+.tv-status.is-done { color: #8fe3b4; background: rgba(58, 192, 123, 0.16); }
+
+.tv-gate {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: #9fb4c5;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.tv-reqs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #93a8ba;
+}
+.tv-reqs .is-met { color: #8fe3b4; }
+
+.tv-lesson-mark {
+  flex: none;
+  width: 18px;
+  display: inline-grid;
+  place-items: center;
+  color: #58d98a;
+}
+.tv-check-sm { width: 13px; height: 13px; }
+.tv-lessons a.is-viewed { color: #fff; }
+.tv-lessons a.is-viewed::before { background: #58d98a; }
+
 .tv-progressline {
   margin-top: 26px;
   display: flex;
@@ -158,11 +201,13 @@
   font-size: 14px;
 }
 .tv-lessons a:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
-.tv-lessons a::before {
+.tv-lessons a .tv-lesson-mark::after {
   content: "";
+  display: block;
   width: 7px; height: 7px; border-radius: 999px;
-  background: var(--cyan); flex: none;
+  background: #52708a;
 }
+.tv-lessons a.is-viewed .tv-lesson-mark::after { display: none; }
 
 .tv-actions { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .tv-btn {

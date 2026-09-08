@@ -2,10 +2,12 @@
  * Module "check your understanding" quizzes — part of course delivery.
  *
  * Short MCQ self-checks shown on the module page. No access code, retakeable,
- * immediate feedback. Passing (>= quiz.pass_percent) marks the module complete.
+ * immediate feedback. Passing is one of the two gates for module completion
+ * (the other is opening every lesson) — see progress.service.
  */
 const db = require('../db');
 const { notFound, badRequest } = require('../utils/http');
+const { recomputeModuleProgress } = require('./progress.service');
 
 /** Full quiz for authoring / grading (includes is_correct). */
 async function loadQuizByModule(moduleId) {
@@ -99,18 +101,22 @@ async function grade({ moduleId, studentId, answers }) {
     { sid: studentId, qid: quiz.id, score, max, percent, passed: passed ? 1 : 0 },
   );
 
-  // Passing the check marks the module complete (Cisco-style gate).
-  if (passed) {
-    await db.query(
-      `INSERT INTO progress (student_id, module_id, status, completed_at)
-       VALUES (:sid, :mid, 'completed', CURRENT_TIMESTAMP)
-       ON DUPLICATE KEY UPDATE status = 'completed',
-         completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)`,
-      { sid: studentId, mid: moduleId },
-    );
-  }
+  // Recompute the module's status: passing the quiz is one gate, opening every
+  // lesson is the other. moduleCompleted tells the client whether this attempt
+  // just finished the module.
+  const stats = await recomputeModuleProgress(studentId, moduleId);
 
-  return { score, maxScore: max, percent, passed, passPercent: quiz.pass_percent, detail };
+  return {
+    score,
+    maxScore: max,
+    percent,
+    passed,
+    passPercent: quiz.pass_percent,
+    detail,
+    moduleStatus: stats.status,
+    moduleCompleted: stats.status === 'completed',
+    lessonsRemaining: Math.max(0, stats.lessonsTotal - stats.lessonsViewed),
+  };
 }
 
 module.exports = { loadQuizByModule, toStudentView, grade };

@@ -21,6 +21,7 @@ DROP TABLE IF EXISTS module_quiz_options;
 DROP TABLE IF EXISTS module_quiz_questions;
 DROP TABLE IF EXISTS module_quizzes;
 DROP TABLE IF EXISTS progress;
+DROP TABLE IF EXISTS lesson_views;
 DROP TABLE IF EXISTS lessons;
 DROP TABLE IF EXISTS modules;
 DROP TABLE IF EXISTS tracks;
@@ -93,12 +94,25 @@ CREATE TABLE lessons (
   INDEX idx_lessons_module (module_id, sort_order)
 ) ENGINE=InnoDB;
 
+-- One row per lesson a student has opened. Drives auto-completion.
+CREATE TABLE lesson_views (
+  student_id      BIGINT UNSIGNED NOT NULL,
+  lesson_id       BIGINT UNSIGNED NOT NULL,
+  first_viewed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_viewed_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id, lesson_id),
+  FOREIGN KEY (student_id) REFERENCES users(id)  ON DELETE CASCADE,
+  FOREIGN KEY (lesson_id)  REFERENCES lessons(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- Per-module completion, visible to admin. One row per (student, module).
+-- status is DERIVED, not set by hand: a module is 'completed' once the student
+-- has opened every published lesson in it AND passed its quiz (if it has one).
 CREATE TABLE progress (
   id           BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   student_id   BIGINT UNSIGNED NOT NULL,
   module_id    BIGINT UNSIGNED NOT NULL,
-  status       ENUM('not_started','in_progress','completed') NOT NULL DEFAULT 'in_progress',
+  status       ENUM('not_started','in_progress','completed') NOT NULL DEFAULT 'not_started',
   completed_at TIMESTAMP NULL,
   updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_progress (student_id, module_id),
