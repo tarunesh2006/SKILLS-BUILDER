@@ -67,8 +67,8 @@ $MYSQL < db/schema.sql
 $MYSQL < db/seed.sql                    # 8 tracks + a little sample content
 $MYSQL < db/seed_c_track.sql                    # C track: 10 modules, ~39 lessons, 6 code assessments
 $MYSQL < db/seed_c_module_quizzes.sql           # C per-module quizzes (50 MCQs)
-$MYSQL < db/seed_networking_track.sql           # Networking track: 7 modules, ~29 lessons, 3 MCQ assessments
-$MYSQL < db/seed_networking_module_quizzes.sql  # Networking per-module quizzes (35 MCQs)
+$MYSQL < db/seed_networking_track.sql           # Networking track: 12 modules, ~49 lessons, 4 MCQ assessments
+$MYSQL < db/seed_networking_module_quizzes.sql  # Networking per-module quizzes (60 MCQs)
 # (schema.sql already includes every table; the db/migrations/*.sql files are
 #  only for upgrading a database created before those features existed.)
 

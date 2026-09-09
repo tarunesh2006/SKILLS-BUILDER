@@ -1,10 +1,12 @@
 -- ============================================================================
 --  Networking track - full content + assessments
---  Source: user-supplied 7-part networking syllabus (LAN/topologies/media/
+--  Source: the user-supplied networking syllabus (LAN/topologies/media/
 --          devices; OSI & TCP/IP; addressing & subnetting; core protocols;
---          switching & advanced LAN; security; modern & cloud networking).
+--          switching; security; modern & cloud) plus the essential modules
+--          needed for a complete course: wireless, WAN, services & QoS,
+--          design & high availability, and network automation.
 --
---  Loads 7 modules, ~29 text lessons (4-5 per module) and 3 auto-graded MCQ
+--  Loads 12 modules, ~49 text lessons (4 per module) and 4 auto-graded MCQ
 --  assessments for the separate Test module. Networking is a non-coding track,
 --  so assessments are multiple choice, not judge-run code.
 --
@@ -42,8 +44,18 @@ INSERT INTO modules (track_id, title, summary, sort_order) VALUES
      'VLANs and trunking, inter-VLAN routing, Spanning Tree Protocol, and NAT/PAT.', 5),
 (@n, 'Module 6: Network Security',
      'Access Control Lists, firewalls/IDS/IPS, VPNs, and switch-port protections (port security, DHCP snooping).', 6),
-(@n, 'Module 7: Modern and Cloud Networking',
-     'SDN and NFV, cloud networking models, IoT and 5G slicing, and a structured troubleshooting method.', 7);
+(@n, 'Module 7: Wireless Networking',
+     '802.11 Wi-Fi standards and bands, SSID/BSS and access-point modes, wireless security (WPA2/WPA3), and RF and site-design basics.', 7),
+(@n, 'Module 8: WAN Technologies and Connectivity',
+     'WAN concepts and terms, access technologies (leased line, DSL, cable, fiber, cellular), MPLS and Metro Ethernet, internet VPNs and SD-WAN.', 8),
+(@n, 'Module 9: Network Services, QoS and Management',
+     'NTP, DNS/DHCP records, Syslog, SNMP and NetFlow, first-hop redundancy (HSRP/VRRP), and Quality of Service fundamentals.', 9),
+(@n, 'Module 10: Network Design and High Availability',
+     'The hierarchical campus model, link and device redundancy (EtherChannel, FHRP), spine-leaf data-centre design, and structured cabling and PoE.', 10),
+(@n, 'Module 11: Modern and Cloud Networking',
+     'SDN and NFV, cloud networking models, IoT and 5G slicing, and a structured troubleshooting method.', 11),
+(@n, 'Module 12: Network Automation and Programmability',
+     'Why automate, data formats (JSON/YAML) and REST APIs, model-driven management (NETCONF/RESTCONF/YANG), Ansible and Infrastructure as Code, and controller-based networking.', 12);
 
 -- ============================================================================
 --  LESSONS
@@ -587,7 +599,7 @@ SELECT id, 'Port Security and DHCP Snooping',
   stopping someone plugging in a switch to hijack the spanning tree.', 4
 FROM modules WHERE track_id = @n AND title = 'Module 6: Network Security';
 
--- ---- Module 7: Modern and Cloud Networking ------------------------
+-- ---- Module 11: Modern and Cloud Networking ------------------------
 INSERT INTO lessons (module_id, title, body_md, sort_order)
 SELECT id, 'SDN and NFV',
 'Traditionally every switch/router runs its own control logic. Two ideas
@@ -606,7 +618,7 @@ change that:
 They are complementary: SDN is about *who decides* forwarding; NFV is about
 *what hardware* the functions run on. Together they underpin cloud and
 carrier networks and **intent-based networking**.', 1
-FROM modules WHERE track_id = @n AND title = 'Module 7: Modern and Cloud Networking';
+FROM modules WHERE track_id = @n AND title = 'Module 11: Modern and Cloud Networking';
 
 INSERT INTO lessons (module_id, title, body_md, sort_order)
 SELECT id, 'Cloud Networking Basics',
@@ -628,7 +640,7 @@ on-premises.
 
 Cloud shifts networking toward **software and API-driven** configuration --
 you describe the network in code and the provider builds it.', 2
-FROM modules WHERE track_id = @n AND title = 'Module 7: Modern and Cloud Networking';
+FROM modules WHERE track_id = @n AND title = 'Module 11: Modern and Cloud Networking';
 
 INSERT INTO lessons (module_id, title, body_md, sort_order)
 SELECT id, 'IoT Networking and 5G Slicing',
@@ -647,7 +659,7 @@ low-power devices. Its networking needs differ from a PC LAN:
 multiple **virtual networks**, each tuned for a purpose: a
 high-bandwidth slice for video, an ultra-low-latency slice for industrial
 control, a massive-device slice for IoT sensors -- each with its own SLA.', 3
-FROM modules WHERE track_id = @n AND title = 'Module 7: Modern and Cloud Networking';
+FROM modules WHERE track_id = @n AND title = 'Module 11: Modern and Cloud Networking';
 
 INSERT INTO lessons (module_id, title, body_md, sort_order)
 SELECT id, 'Network Troubleshooting Tools and Method',
@@ -674,7 +686,526 @@ SELECT id, 'Network Troubleshooting Tools and Method',
 | show commands (`show ip route`, `show interfaces`) | device state |
 
 Always **change one thing at a time** and re-test.', 4
-FROM modules WHERE track_id = @n AND title = 'Module 7: Modern and Cloud Networking';
+FROM modules WHERE track_id = @n AND title = 'Module 11: Modern and Cloud Networking';
+
+
+-- ---- Module 7: Wireless Networking ----------------------------------
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'How Wi-Fi Works and the 802.11 Standards',
+'**Wi-Fi** is IEEE **802.11**. The radio is a **shared, half-duplex**
+medium: a station cannot listen while it transmits, so instead of collision
+*detection* (CSMA/CD, wired) it uses collision **avoidance** -- **CSMA/CA**:
+listen, wait a random backoff, then send, and expect an ACK.
+
+| Standard | Marketing name | Band(s) | Max rate (approx) | Key feature |
+|----------|----------------|---------|-------------------|-------------|
+| 802.11b | -- | 2.4 GHz | 11 Mbps | first mass Wi-Fi |
+| 802.11a | -- | 5 GHz | 54 Mbps | less crowded band |
+| 802.11g | -- | 2.4 GHz | 54 Mbps | b-compatible |
+| 802.11n | Wi-Fi 4 | 2.4 + 5 GHz | ~450 Mbps | MIMO, channel bonding |
+| 802.11ac | Wi-Fi 5 | 5 GHz | ~1.3 Gbps+ | wider channels, MU-MIMO |
+| 802.11ax | Wi-Fi 6 / 6E | 2.4 + 5 (+6) GHz | multi-Gbps | OFDMA, efficiency in dense areas |
+
+**Bands:**
+
+- **2.4 GHz** -- longer range, better through walls, but only **3
+  non-overlapping channels (1, 6, 11)** and lots of interference (Bluetooth,
+  microwaves, neighbours).
+- **5 GHz** -- many non-overlapping channels, far less congestion, higher
+  throughput, but shorter range.
+- **6 GHz** (Wi-Fi 6E) -- brand-new clean spectrum.', 1
+FROM modules WHERE track_id = @n AND title = 'Module 7: Wireless Networking';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'SSID, BSS, and Access-Point Modes',
+'Key terms:
+
+- **SSID** -- the network *name* you pick from the list.
+- **BSSID** -- the AP radio''s MAC address for that SSID.
+- **BSS** (Basic Service Set) -- one AP plus its associated clients.
+- **ESS** (Extended Service Set) -- several APs sharing one SSID so a client
+  can **roam** between them without the user noticing.
+
+A client joins in three steps: it hears **beacons** (or sends a probe),
+**authenticates**, then **associates** with the AP.
+
+**Deployment models:**
+
+| Model | How it works | Fits |
+|-------|--------------|------|
+| **Autonomous AP** | each AP configured individually | 1-3 APs |
+| **Controller-based** | thin/lightweight APs get config and RF management from a **WLC** (via CAPWAP) | campus, dozens-thousands of APs |
+| **Cloud-managed** | APs managed from a vendor cloud dashboard | distributed sites |
+
+Design: lay APs out as overlapping **cells** with ~15-20% overlap for
+roaming, and give neighbouring APs **different channels** to avoid
+co-channel interference.', 2
+FROM modules WHERE track_id = @n AND title = 'Module 7: Wireless Networking';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Wireless Security',
+'Because anyone in range can hear the radio, encryption and authentication
+are essential.
+
+| Method | Verdict |
+|--------|---------|
+| **Open** | no security -- guest portals only |
+| **WEP** | broken -- never use |
+| **WPA** | interim fix (TKIP) -- deprecated |
+| **WPA2** | AES-CCMP -- long the standard |
+| **WPA3** | current -- SAE handshake (resists offline password cracking), forward secrecy, mandatory Protected Management Frames |
+
+Two authentication styles:
+
+- **Personal (PSK)** -- one shared passphrase for everyone. Simple; a leaked
+  password means re-keying the whole network.
+- **Enterprise (802.1X)** -- each user authenticates to a **RADIUS** server
+  with their own credentials or a certificate; keys are per-session.
+
+**Threats:** rogue APs, **evil twin** (a fake AP with your SSID),
+deauthentication floods. **Mitigations:** WPA3, 802.1X, a Wireless IPS
+(WIPS), and disabling legacy protocols.', 3
+FROM modules WHERE track_id = @n AND title = 'Module 7: Wireless Networking';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'RF Fundamentals and Wireless Design',
+'Radio signal strength is measured in **dBm** (decibels relative to 1 mW),
+always negative for received Wi-Fi:
+
+| RSSI | Quality |
+|------|---------|
+| -30 to -50 dBm | excellent |
+| -60 to -67 dBm | good -- target for voice/video |
+| -70 dBm | usable for basic data |
+| -80 dBm and below | unreliable |
+
+What also matters is **SNR** -- the gap between the signal and the **noise
+floor**; a higher SNR means faster, more reliable rates.
+
+**Signal loss (attenuation)** comes from distance (free-space path loss),
+walls, metal, water (people), and interference from other 2.4 GHz devices.
+
+**Designing a WLAN:**
+
+1. Do a **site survey** -- predictive (from a floor plan), then a passive or
+   active walk-through with a real AP.
+2. Place APs for coverage **and** capacity (more users -> more APs, smaller
+   cells, lower power).
+3. Build a **channel plan** (non-overlapping, reuse only when far apart).
+4. Choose antennas: **omnidirectional** for general coverage, **directional**
+   (patch, Yagi) for corridors or point-to-point links.', 4
+FROM modules WHERE track_id = @n AND title = 'Module 7: Wireless Networking';
+
+-- ---- Module 8: WAN Technologies and Connectivity ------------------
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'WAN Concepts and Terminology',
+'A **WAN** connects sites that are too far apart for a LAN -- across a city,
+a country, or the globe. You **do not own** the infrastructure in between;
+you buy a service from a provider.
+
+| Term | Meaning |
+|------|---------|
+| **CPE** | Customer Premises Equipment -- your router/modem at the site |
+| **Demarc** | demarcation point -- where the provider''s responsibility ends and yours begins |
+| **Local loop** | the link from your building to the provider''s nearest facility |
+| **CO / POP** | the provider''s Central Office / Point of Presence |
+| **DTE / DCE** | your device (DTE) vs the provider''s clocking device (DCE) |
+
+Switching styles:
+
+- **Leased line** -- a dedicated, always-on circuit between two points. Fixed
+  bandwidth, predictable, expensive.
+- **Circuit-switched** -- a path set up per call (old telephone / ISDN).
+- **Packet-switched** -- shared provider network, you get a virtual circuit
+  (Frame Relay historically, MPLS today).', 1
+FROM modules WHERE track_id = @n AND title = 'Module 8: WAN Technologies and Connectivity';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'WAN Access Technologies',
+'| Technology | Medium | Notes |
+|------------|--------|-------|
+| **Leased line** (T1/E1, serial) | dedicated copper/fiber | guaranteed bandwidth; **PPP** or HDLC encapsulation |
+| **DSL** (ADSL/VDSL) | ordinary phone line | asymmetric (faster down); distance-sensitive |
+| **Cable** | coax (DOCSIS) | fast, but bandwidth **shared** with the neighbourhood |
+| **Fiber to the home** (GPON) | fiber | high, symmetric bandwidth |
+| **Cellular** (4G LTE / 5G) | radio | mobility and quick deployment; used as primary at small sites and as **backup** everywhere |
+| **Satellite** | radio to orbit | reaches anywhere; high latency (geostationary ~600 ms) |
+
+**PPP** (Point-to-Point Protocol) is the classic serial-link protocol. It
+adds:
+
+- **authentication** -- **PAP** (clear text, weak) or **CHAP** (challenge-
+  response, no password on the wire)
+- **multilink** -- bond several circuits into one logical link
+- error detection and Layer 3 negotiation (NCP)', 2
+FROM modules WHERE track_id = @n AND title = 'Module 8: WAN Technologies and Connectivity';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'MPLS and Metro Ethernet',
+'**MPLS** (Multi-Protocol Label Switching) is the workhorse of provider
+networks. At the edge, a **PE** router pushes a short **label** onto each
+packet; core **P** routers forward purely on the label (fast, no full IP
+lookup); the egress PE pops it. The customer''s **CE** router just sees an
+IP path.
+
+- **Any-to-any** -- every site can reach every other site directly
+  (a routed mesh), unlike hub-and-spoke leased lines.
+- **L3 VPN** -- the provider participates in your routing (per-customer
+  VRFs). **L2 VPN** -- the provider carries your Ethernet frames
+  transparently.
+- Built-in **QoS** classes and fast reroute.
+
+**Metro Ethernet** hands you a plain **Ethernet** port (10 M - 100 G) that
+reaches across a metropolitan area:
+
+- **E-Line** -- point-to-point (like a virtual leased line)
+- **E-LAN** -- multipoint (all sites on one broadcast domain)
+- **E-Tree** -- hub-and-spoke
+
+It is popular because the customer edge is just a switch/router with a
+normal Ethernet interface.', 3
+FROM modules WHERE track_id = @n AND title = 'Module 8: WAN Technologies and Connectivity';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Internet VPNs and SD-WAN',
+'The cheapest WAN is the **public internet** plus encryption:
+
+- **Site-to-site IPsec** -- an encrypted tunnel between two edge devices
+  (Module 6). Low cost, works anywhere with internet.
+- **GRE** -- a simple tunnel that can carry multicast and routing protocols;
+  usually wrapped in IPsec for security.
+- **DMVPN** -- IPsec tunnels that build **dynamically** between spokes on
+  demand, so spoke-to-spoke traffic does not hairpin through the hub.
+
+**SD-WAN** is the modern approach. A central **controller** manages all the
+edge devices; each site can use **several transports at once** (MPLS +
+broadband + LTE). The SD-WAN box:
+
+- continuously measures loss, latency and jitter on each path
+- steers traffic by **application policy** -- e.g. voice on the best path,
+  bulk backup on the cheapest
+- fails over sub-second when a link degrades
+- is **zero-touch provisioned** and includes integrated security
+
+The result: the reliability of MPLS at closer to broadband cost, with
+central policy.', 4
+FROM modules WHERE track_id = @n AND title = 'Module 8: WAN Technologies and Connectivity';
+
+-- ---- Module 9: Network Services, QoS and Management --------------
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Time, Names and Logs: NTP, DNS Records, Syslog',
+'**NTP** (Network Time Protocol) keeps every device''s clock in sync with a
+reference. It matters more than it looks: correlated log timestamps,
+certificate validity, Kerberos tickets, and scheduled jobs all depend on
+accurate time. Sources are ranked by **stratum** (stratum 0 = an atomic
+clock / GPS, stratum 1 = a server directly attached to one, and so on).
+
+**DNS record types** you will meet running a zone:
+
+| Record | Maps |
+|--------|------|
+| **A** | name -> IPv4 |
+| **AAAA** | name -> IPv6 |
+| **CNAME** | name -> another name (alias) |
+| **MX** | domain -> mail server |
+| **NS** | zone -> its authoritative name servers |
+| **PTR** | IP -> name (reverse lookup) |
+| **TXT** | free text (SPF, domain verification) |
+
+**Syslog** sends log messages to a central server, tagged with a
+**severity** 0-7: `0 emergency, 1 alert, 2 critical, 3 error, 4 warning,
+5 notice, 6 informational, 7 debug`. Central logging is essential for
+troubleshooting and security.', 1
+FROM modules WHERE track_id = @n AND title = 'Module 9: Network Services, QoS and Management';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Monitoring: SNMP and Flow Data',
+'**SNMP** (Simple Network Management Protocol) is how a management station
+reads and changes device state.
+
+- The **agent** runs on the device; the **manager** polls it.
+- Values live in the **MIB**, a tree of **OIDs** (e.g. interface counters,
+  CPU, memory).
+- Operations: **GET** / **GETNEXT** (read), **SET** (write), and **TRAP** /
+  **INFORM** (the device pushes an alert).
+- **v2c** authenticates with a plaintext *community string* -- weak. **v3**
+  adds real authentication and encryption; use it.
+
+**Flow data** (**NetFlow**, IPFIX, sFlow) answers *"who talked to whom, over
+what, and how much?"*. The device exports a record per conversation
+(src/dst IP, ports, protocol, bytes, packets). Used for traffic analysis,
+capacity planning, billing, and spotting anomalies.
+
+For full packet capture, mirror traffic to an analyser with **SPAN** (local)
+or **RSPAN** (across switches).', 2
+FROM modules WHERE track_id = @n AND title = 'Module 9: Network Services, QoS and Management';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'First-Hop Redundancy (HSRP / VRRP / GLBP)',
+'Hosts have **one** default gateway. If that router fails, the whole subnet
+is cut off even when a second router exists. **First-Hop Redundancy
+Protocols** fix this by sharing a **virtual IP** (and virtual MAC) between
+routers.
+
+- **HSRP** (Cisco) -- one router is **Active**, another **Standby**. Hosts
+  point at the virtual IP. If the Active stops sending hellos, the Standby
+  takes over the virtual IP/MAC -- hosts notice nothing.
+- **VRRP** -- the open-standard equivalent (Master / Backup).
+- **GLBP** (Cisco) -- like HSRP but also **load-balances**: it hands
+  different routers'' MACs to different hosts in ARP replies.
+
+Key knobs:
+
+- **priority** -- higher wins the Active role
+- **preempt** -- a recovered higher-priority router reclaims Active
+- **interface / object tracking** -- lower your priority automatically if
+  your uplink goes down, so the peer takes over.', 3
+FROM modules WHERE track_id = @n AND title = 'Module 9: Network Services, QoS and Management';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Quality of Service (QoS)',
+'A converged network carries voice, video and data on the same links, and
+they have very different needs:
+
+| Traffic | Bandwidth | Delay | Jitter | Loss |
+|---------|-----------|-------|--------|------|
+| **Voice** | low, steady | < 150 ms | < 30 ms | < 1% |
+| **Video** | high, bursty | < 200-400 ms | low | < 1% |
+| **Data** | varies | tolerant | tolerant | tolerant (TCP resends) |
+
+When a link is congested, QoS decides **what to drop and what to delay**.
+The pipeline:
+
+1. **Classify** -- identify traffic (by port, DSCP, or deep inspection).
+2. **Mark** -- write a **DSCP** value in the IP header (or CoS in the
+   802.1Q tag) at the network edge, inside a **trust boundary**.
+3. **Queue** -- put marked traffic into priority queues; **LLQ** gives voice
+   a strict-priority queue, **CBWFQ** gives others guaranteed shares.
+4. **Condition** -- **policing** drops traffic above a rate; **shaping**
+   buffers it to smooth bursts (better for TCP).
+
+Rule: mark at the edge, trust in the core, and give real-time traffic its
+own low-latency queue.', 4
+FROM modules WHERE track_id = @n AND title = 'Module 9: Network Services, QoS and Management';
+
+-- ---- Module 10: Network Design and High Availability ------------
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'The Hierarchical Campus Model',
+'A campus network is designed in **three layers**, each with one job:
+
+| Layer | Job | Typical features |
+|-------|-----|------------------|
+| **Access** | connect end devices | switch ports, PoE, VLANs, port security, PortFast |
+| **Distribution** | aggregate the access layer | inter-VLAN routing, ACLs / policy, route summarisation, redundancy, FHRP |
+| **Core** | move traffic fast between distribution blocks | high-speed L3 links, few features, maximum availability |
+
+Why bother:
+
+- **Modularity** -- add another access-switch or building block without
+  redesigning anything.
+- **Fault isolation** -- a problem in one access block stays there.
+- **Predictable traffic** -- it flows up to distribution, across the core,
+  and back down.
+
+**Collapsed core** -- in a small site the distribution and core are the same
+pair of switches. You still keep the *access* layer separate.', 1
+FROM modules WHERE track_id = @n AND title = 'Module 10: Network Design and High Availability';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Redundancy and Resiliency',
+'High availability means **no single point of failure**.
+
+**Link redundancy -- EtherChannel / LACP:** bundle 2-8 physical links into
+one logical link. Traffic is load-balanced across the members and, if one
+link fails, the bundle keeps running with no spanning-tree reconvergence.
+
+**Device redundancy:**
+
+- dual distribution switches, each access switch dual-homed to both
+- **FHRP** (HSRP/VRRP) so hosts survive a gateway failure
+- switch stacking / **StackWise Virtual** / **VSS** -- two physical switches
+  act as one logical device, so you get one control plane and no STP block
+
+**Design guidance:**
+
+- keep **Layer 2 (STP) domains small**; route at the distribution layer
+- use **equal-cost Layer 3 links** for fast, loop-free failover
+- protect **power and cooling** too: dual power supplies, UPS, generator,
+  redundant HVAC.', 2
+FROM modules WHERE track_id = @n AND title = 'Module 10: Network Design and High Availability';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Data-Centre Topologies: Spine-Leaf',
+'Traditional 3-tier design assumes traffic is mostly **north-south**
+(client <-> server). Modern data centres are dominated by **east-west**
+traffic (server <-> server: VMs, storage, microservices), where the old
+model creates bottlenecks and unpredictable latency.
+
+**Spine-leaf** solves this:
+
+- every **leaf** switch (top-of-rack) connects to **every spine** switch
+- servers connect only to leaves; spines connect only to leaves
+- any server is **exactly two hops** from any other -> predictable,
+  consistent latency
+- scale out by adding another leaf (more racks) or another spine (more
+  bandwidth)
+
+There is no spanning tree; the fabric runs **Layer 3 (ECMP)** with an
+overlay such as **VXLAN/EVPN** to carry tenant Layer 2 where needed.
+
+**Oversubscription ratio** = downlink bandwidth : uplink bandwidth on a
+leaf. 3:1 is common for general workloads; 1:1 (non-blocking) for storage
+or HPC.', 3
+FROM modules WHERE track_id = @n AND title = 'Module 10: Network Design and High Availability';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Structured Cabling and Power over Ethernet',
+'**Structured cabling** (TIA/EIA-568) organises the physical plant:
+
+- **Horizontal cabling** -- from the floor''s wiring closet (**IDF**) to each
+  wall jack; max **90 m** permanent + 10 m of patch cords.
+- **Backbone cabling** -- between IDFs and the main room (**MDF**), usually
+  fiber.
+- **Patch panels** terminate the runs so you patch, not re-pull, cable.
+
+**Copper categories:**
+
+| Cat | Rated for |
+|-----|-----------|
+| 5e | 1 Gbps @ 100 m |
+| 6 | 1 Gbps @ 100 m, 10 Gbps @ ~55 m |
+| 6a | 10 Gbps @ 100 m |
+| 8 | 25/40 Gbps @ 30 m (data-centre) |
+
+Pinouts: **T568B** is the common standard; a **straight-through** cable is
+the same at both ends (device to switch), a **crossover** swaps pairs
+(switch to switch) -- though **Auto-MDIX** now fixes this automatically.
+
+**PoE** delivers power over the data pairs:
+
+| Standard | Power at the device |
+|----------|---------------------|
+| 802.3af (PoE) | 12.95 W |
+| 802.3at (PoE+) | 25.5 W |
+| 802.3bt (PoE++) | up to ~71 W |
+
+Used for IP phones, wireless APs, and cameras. Watch the switch''s total
+**power budget**.', 4
+FROM modules WHERE track_id = @n AND title = 'Module 10: Network Design and High Availability';
+
+-- ---- Module 12: Network Automation and Programmability ----------
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Why Automate, and the Building Blocks',
+'Configuring devices by hand, one CLI session at a time, is slow,
+inconsistent, and does not scale -- and most outages are caused by manual
+change. **Automation** applies the same tested change everywhere, fast, and
+records exactly what was done.
+
+**Data formats** carry structured config and state:
+
+```json
+{ "interface": "GigabitEthernet1", "enabled": true, "mtu": 1500 }
+```
+```yaml
+interface: GigabitEthernet1
+enabled: true
+mtu: 1500
+```
+
+Both express key/value pairs, lists, and nesting; YAML is easier for humans,
+JSON is what APIs speak.
+
+**REST APIs** let a program read and change a device or controller over
+HTTPS:
+
+| Verb | Action |
+|------|--------|
+| GET | read |
+| POST | create |
+| PUT / PATCH | update |
+| DELETE | remove |
+
+The response is JSON plus a **status code** (200 OK, 201 created, 401
+unauthorised, 404 not found). **Idempotency** matters: you describe the
+*desired* state and re-running the request changes nothing if it already
+matches.', 1
+FROM modules WHERE track_id = @n AND title = 'Module 12: Network Automation and Programmability';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Model-Driven Management: NETCONF, RESTCONF, YANG',
+'SNMP is fine for *reading* counters but clumsy for *writing* configuration.
+Model-driven management fixes that.
+
+- **YANG** -- a language that defines a **data model**: the exact structure,
+  types and constraints of a device''s config and operational state. Vendors
+  and the IETF publish YANG modules.
+- **NETCONF** -- a protocol (over SSH, XML-encoded) that reads and writes
+  that model. It has **datastores** -- `running`, and often a `candidate`
+  you edit and then **commit** atomically, so a bad change never half-
+  applies. Operations: `<get-config>`, `<edit-config>`, `<commit>`,
+  `<lock>`.
+- **RESTCONF** -- the same idea over plain HTTPS with JSON, so it fits web
+  tooling and simple scripts.
+
+Compared with screen-scraping the CLI, this is **structured** (no fragile
+text parsing) and **transactional** (all-or-nothing changes).', 2
+FROM modules WHERE track_id = @n AND title = 'Module 12: Network Automation and Programmability';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Automation Tools and Infrastructure as Code',
+'**Python** is the glue language of network automation. Common libraries:
+
+- **Netmiko** -- SSH to devices and send/collect CLI reliably
+- **NAPALM** -- one vendor-neutral API for getters and config across
+  platforms
+- **requests** -- call REST APIs
+
+**Ansible** is the most common framework:
+
+- **agentless** -- it just needs SSH or an API
+- an **inventory** lists devices and groups
+- a **playbook** (YAML) lists tasks; network **modules** push or read config
+- **idempotent** -- running it twice is safe
+
+**Infrastructure as Code (IaC):** the network configuration lives in a
+**Git** repository, not on the devices. Benefits:
+
+- every change is a reviewed commit with history and an author
+- roll back by checking out an earlier version
+- a **CI/CD pipeline** lints the change, tests it in a virtual lab, then
+  deploys it
+
+**Templating** (Jinja2): one template + a small per-device variables file
+generates every device''s config, so 200 switches stay identical by
+construction.', 3
+FROM modules WHERE track_id = @n AND title = 'Module 12: Network Automation and Programmability';
+
+INSERT INTO lessons (module_id, title, body_md, sort_order)
+SELECT id, 'Controllers, APIs and Intent-Based Networking',
+'**Controller-based networking** (the SDN idea from Module 11, applied):
+
+- a central **controller** holds the whole-network view
+- you talk to its **northbound API** (REST) to express *what you want*
+- the controller uses **southbound** protocols (NETCONF, OpenFlow, vendor
+  APIs) to configure every device to match
+
+Examples: Cisco **Catalyst Center** (formerly DNA Center), **Meraki**
+dashboard API, Cisco **ACI** for data centres, and public-cloud VPC APIs.
+
+**CI/CD for network changes** mirrors software delivery:
+
+```
+edit config in Git  ->  lint / validate  ->  test in a virtual lab
+     ->  deploy via the controller/Ansible  ->  automated post-checks
+     ->  monitor
+```
+
+**Intent-Based Networking (IBN)** is the goal state of all this: you declare
+a business **intent** ("finance and HR must be isolated", "guest Wi-Fi gets
+20 Mbps"), the controller translates it into device config, and it
+**continuously assures** the intent is still being met, alerting you when
+reality drifts.', 4
+FROM modules WHERE track_id = @n AND title = 'Module 12: Network Automation and Programmability';
 
 -- ============================================================================
 --  ASSESSMENTS  (Test module - multiple choice, admin-gated)
@@ -838,6 +1369,70 @@ SET @i := LAST_INSERT_ID();
 INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
 (@i, 'permit any', 0, 1), (@i, 'deny any', 1, 2),
 (@i, 'log any', 0, 3), (@i, 'nothing', 0, 4);
+
+-- ---- Assessment 4: Wireless, WAN, Services and Automation (Modules 7-12) ----
+INSERT INTO tests (track_id, title, instructions, duration_minutes, is_published, created_by)
+VALUES (@n, 'Networking Assessment 4: Wireless, WAN, Services and Automation',
+'Multiple choice. One correct answer per question.', 30, 1, @admin);
+SET @t := LAST_INSERT_ID();
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'Wi-Fi avoids collisions using...', 10, 1);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'CSMA/CD', 0, 1), (@i, 'CSMA/CA', 1, 2),
+(@i, 'token passing', 0, 3), (@i, 'full-duplex', 0, 4);
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'Which wireless security standard is current and uses the SAE handshake?', 10, 2);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'WEP', 0, 1), (@i, 'WPA2', 0, 2), (@i, 'WPA3', 1, 3), (@i, 'Open', 0, 4);
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'SD-WAN''s key advantage over traditional WAN is...', 10, 3);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'it uses only MPLS', 0, 1),
+(@i, 'central, application-aware control across multiple transports', 1, 2),
+(@i, 'it removes the need for routers', 0, 3),
+(@i, 'it works only over satellite', 0, 4);
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'HSRP and VRRP provide redundancy for...', 10, 4);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'DNS servers', 0, 1), (@i, 'the default gateway', 1, 2),
+(@i, 'DHCP scopes', 0, 3), (@i, 'wireless access points', 0, 4);
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'In the hierarchical campus model, inter-VLAN routing and ACLs are applied at the...', 10, 5);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'access layer', 0, 1), (@i, 'distribution layer', 1, 2),
+(@i, 'core layer', 0, 3), (@i, 'physical layer', 0, 4);
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'Which data-centre topology puts every server two hops from any other?', 10, 6);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'Traditional three-tier', 0, 1), (@i, 'Bus', 0, 2),
+(@i, 'Spine-leaf', 1, 3), (@i, 'Ring', 0, 4);
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'A REST API call to read a device''s interface list uses which HTTP verb?', 10, 7);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'GET', 1, 1), (@i, 'POST', 0, 2), (@i, 'DELETE', 0, 3), (@i, 'PATCH', 0, 4);
+
+INSERT INTO test_items (test_id, type, prompt_md, points, sort_order) VALUES
+(@t, 'mcq', 'What does YANG provide in model-driven network management?', 10, 8);
+SET @i := LAST_INSERT_ID();
+INSERT INTO test_item_options (item_id, label, is_correct, sort_order) VALUES
+(@i, 'An encrypted transport', 0, 1),
+(@i, 'A data model describing device config and state', 1, 2),
+(@i, 'A physical cabling standard', 0, 3),
+(@i, 'A routing protocol', 0, 4);
 
 -- ============================================================================
 --  Recompute cached point totals

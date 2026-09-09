@@ -328,11 +328,11 @@ INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VAL
 (@qq, 'trunk ports only', 0, 4);
 
 -- ===========================================================================
--- Module 7: Modern and Cloud Networking
+-- Module 11: Modern and Cloud Networking
 -- ===========================================================================
 INSERT INTO module_quizzes (module_id, title)
-SELECT id, 'Module 7 Quiz: Modern and Cloud Networking'
-  FROM modules WHERE track_id = @n AND title LIKE 'Module 7:%';
+SELECT id, 'Module 11 Quiz: Modern and Cloud Networking'
+  FROM modules WHERE track_id = @n AND title LIKE 'Module 11:%';
 SET @q := LAST_INSERT_ID();
 
 INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
@@ -384,6 +384,270 @@ INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VAL
 (@qq, 'The physical link - cable, port, link light', 1, 2),
 (@qq, 'The BGP routing table', 0, 3),
 (@qq, 'The application logs', 0, 4);
+
+-- ===========================================================================
+-- Module 7: Wireless Networking
+-- ===========================================================================
+INSERT INTO module_quizzes (module_id, title)
+SELECT id, 'Module 7 Quiz: Wireless Networking'
+  FROM modules WHERE track_id = @n AND title LIKE 'Module 7:%';
+SET @q := LAST_INSERT_ID();
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Wi-Fi uses which media-access method?', 'mcq',
+        'A radio cannot listen while transmitting, so 802.11 uses CSMA/CA (collision avoidance) with ACKs, not CSMA/CD.', 1);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'CSMA/CD', 0, 1), (@qq, 'CSMA/CA', 1, 2),
+(@qq, 'Token passing', 0, 3), (@qq, 'Full-duplex switching', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'How many non-overlapping channels does the 2.4 GHz band offer?', 'mcq',
+        'Only three: channels 1, 6 and 11. The 5 GHz band has many more.', 2);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, '1', 0, 1), (@qq, '3', 1, 2), (@qq, '11', 0, 3), (@qq, '24', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Which wireless security standard uses the SAE handshake and mandatory Protected Management Frames?', 'mcq',
+        'WPA3. WEP and WPA are obsolete; WPA2 uses AES-CCMP but the older 4-way handshake.', 3);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'WEP', 0, 1), (@qq, 'WPA', 0, 2), (@qq, 'WPA2', 0, 3), (@qq, 'WPA3', 1, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'In a large campus WLAN, lightweight access points get their configuration and RF settings from...', 'mcq',
+        'A Wireless LAN Controller (WLC), which the APs reach over CAPWAP.', 4);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'each other via a mesh', 0, 1),
+(@qq, 'a Wireless LAN Controller (WLC)', 1, 2),
+(@qq, 'the DHCP server', 0, 3),
+(@qq, 'individual manual configuration', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'A received signal strength of -85 dBm indicates...', 'mcq',
+        'Wi-Fi RSSI is negative; closer to 0 is stronger. -30 to -50 is excellent, around -67 is the target for voice, and -80 or below is unreliable.', 5);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'an excellent signal', 0, 1),
+(@qq, 'a weak, unreliable signal', 1, 2),
+(@qq, 'interference-free operation', 0, 3),
+(@qq, 'a wired connection', 0, 4);
+
+-- ===========================================================================
+-- Module 8: WAN Technologies and Connectivity
+-- ===========================================================================
+INSERT INTO module_quizzes (module_id, title)
+SELECT id, 'Module 8 Quiz: WAN Technologies'
+  FROM modules WHERE track_id = @n AND title LIKE 'Module 8:%';
+SET @q := LAST_INSERT_ID();
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'What is the demarcation point (demarc) on a WAN link?', 'mcq',
+        'It is where the service provider''s responsibility ends and the customer''s begins.', 1);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'The customer''s core switch', 0, 1),
+(@qq, 'The boundary between the provider and the customer', 1, 2),
+(@qq, 'The DNS server', 0, 3),
+(@qq, 'The default gateway', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Which serial-link authentication method sends no password over the wire?', 'mcq',
+        'CHAP uses a challenge-response exchange; PAP sends the password in clear text.', 2);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'PAP', 0, 1), (@qq, 'CHAP', 1, 2), (@qq, 'HDLC', 0, 3), (@qq, 'None - PPP has no authentication', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'In an MPLS network, core (P) routers forward traffic based on...', 'mcq',
+        'The MPLS label pushed at the edge, not a full destination-IP lookup.', 3);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'the destination IP address', 0, 1),
+(@qq, 'a short label', 1, 2),
+(@qq, 'the source MAC address', 0, 3),
+(@qq, 'the TCP port', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'What is the defining feature of SD-WAN?', 'mcq',
+        'A central controller and policy-based, application-aware path selection across several transports (MPLS, broadband, LTE) at once.', 4);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'It replaces all routers with switches', 0, 1),
+(@qq, 'Central control and application-aware use of multiple transports', 1, 2),
+(@qq, 'It only works over satellite', 0, 3),
+(@qq, 'It removes the need for encryption', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Which WAN access technology shares bandwidth with other subscribers in the neighbourhood?', 'mcq',
+        'Cable (DOCSIS) is a shared medium; a dedicated leased line is not.', 5);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'A dedicated leased line', 0, 1),
+(@qq, 'Cable broadband', 1, 2),
+(@qq, 'A point-to-point fiber link', 0, 3),
+(@qq, 'An MPLS L3 VPN', 0, 4);
+
+-- ===========================================================================
+-- Module 9: Network Services, QoS and Management
+-- ===========================================================================
+INSERT INTO module_quizzes (module_id, title)
+SELECT id, 'Module 9 Quiz: Services, QoS and Management'
+  FROM modules WHERE track_id = @n AND title LIKE 'Module 9:%';
+SET @q := LAST_INSERT_ID();
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Why does accurate NTP matter across a network?', 'mcq',
+        'Correlated log timestamps, certificate validity, Kerberos, and scheduled jobs all depend on synchronised clocks.', 1);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'It speeds up routing convergence', 0, 1),
+(@qq, 'Logs, certificates and authentication all rely on synchronised time', 1, 2),
+(@qq, 'It assigns IP addresses', 0, 3),
+(@qq, 'It is only needed on wireless networks', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Which DNS record maps a name to an IPv6 address?', 'mcq',
+        'AAAA maps name -> IPv6. A is name -> IPv4; PTR is the reverse; MX points to mail servers.', 2);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'A', 0, 1), (@qq, 'AAAA', 1, 2), (@qq, 'CNAME', 0, 3), (@qq, 'MX', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Which SNMP version should you use because it adds authentication and encryption?', 'mcq',
+        'SNMPv3. v1 and v2c authenticate only with a plaintext community string.', 3);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'SNMPv1', 0, 1), (@qq, 'SNMPv2c', 0, 2), (@qq, 'SNMPv3', 1, 3), (@qq, 'They are all equally secure', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'What problem do HSRP and VRRP solve?', 'mcq',
+        'They remove the default gateway as a single point of failure by sharing one virtual IP/MAC between two routers.', 4);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'Slow DNS resolution', 0, 1),
+(@qq, 'A single default gateway being a single point of failure', 1, 2),
+(@qq, 'IP address exhaustion', 0, 3),
+(@qq, 'Wi-Fi interference', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'In QoS, what is the difference between policing and shaping?', 'mcq',
+        'Policing drops (or re-marks) traffic above the rate immediately; shaping buffers it and releases it smoothly.', 5);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'They are the same thing', 0, 1),
+(@qq, 'Policing drops excess traffic; shaping buffers and smooths it', 1, 2),
+(@qq, 'Shaping drops packets; policing encrypts them', 0, 3),
+(@qq, 'Both only apply to wireless links', 0, 4);
+
+-- ===========================================================================
+-- Module 10: Network Design and High Availability
+-- ===========================================================================
+INSERT INTO module_quizzes (module_id, title)
+SELECT id, 'Module 10 Quiz: Design and High Availability'
+  FROM modules WHERE track_id = @n AND title LIKE 'Module 10:%';
+SET @q := LAST_INSERT_ID();
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'In the hierarchical campus model, which layer performs inter-VLAN routing and applies policy/ACLs?', 'mcq',
+        'The distribution layer aggregates access switches and does the routing and policy; the core just forwards fast.', 1);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'Access', 0, 1), (@qq, 'Distribution', 1, 2),
+(@qq, 'Core', 0, 3), (@qq, 'Physical', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'What does EtherChannel (LACP) provide?', 'mcq',
+        'It bundles several physical links into one logical link with load balancing and fast failover, and STP treats it as one link.', 2);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'Encryption between switches', 0, 1),
+(@qq, 'One logical link from several physical links, load-balanced', 1, 2),
+(@qq, 'Automatic IP addressing', 0, 3),
+(@qq, 'VLAN tagging', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Why is spine-leaf preferred in modern data centres?', 'mcq',
+        'Every server is exactly two hops from any other, giving predictable low latency for heavy east-west (server-to-server) traffic, and it scales by adding leaves or spines.', 3);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'It uses only one cable per rack', 0, 1),
+(@qq, 'It gives predictable low latency for east-west traffic and scales out easily', 1, 2),
+(@qq, 'It removes the need for switches', 0, 3),
+(@qq, 'It relies on spanning tree for load balancing', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'What is the maximum length of a horizontal copper cable run under the structured-cabling standard (permanent link)?', 'mcq',
+        '90 m permanent link plus up to 10 m of patch cords = 100 m total channel.', 4);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, '55 m', 0, 1), (@qq, '90 m', 1, 2), (@qq, '150 m', 0, 3), (@qq, '300 m', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Which PoE standard delivers the most power to a device?', 'mcq',
+        '802.3bt (PoE++) provides up to ~71 W at the device; 802.3af gives ~13 W and 802.3at ~25 W.', 5);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, '802.3af (PoE)', 0, 1), (@qq, '802.3at (PoE+)', 0, 2),
+(@qq, '802.3bt (PoE++)', 1, 3), (@qq, 'They all deliver the same', 0, 4);
+
+-- ===========================================================================
+-- Module 12: Network Automation and Programmability
+-- ===========================================================================
+INSERT INTO module_quizzes (module_id, title)
+SELECT id, 'Module 12 Quiz: Automation and Programmability'
+  FROM modules WHERE track_id = @n AND title LIKE 'Module 12:%';
+SET @q := LAST_INSERT_ID();
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Which HTTP verb does a REST API use to read a resource?', 'mcq',
+        'GET reads; POST creates; PUT/PATCH update; DELETE removes.', 1);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'GET', 1, 1), (@qq, 'POST', 0, 2), (@qq, 'PUT', 0, 3), (@qq, 'DELETE', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'What is YANG?', 'mcq',
+        'YANG is a language for defining a data model - the exact structure and types of a device''s configuration and state - used by NETCONF and RESTCONF.', 2);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'A transport protocol like SSH', 0, 1),
+(@qq, 'A data-modelling language for device config and state', 1, 2),
+(@qq, 'A Python automation library', 0, 3),
+(@qq, 'A cabling standard', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'Ansible is described as "agentless". What does that mean?', 'mcq',
+        'It needs no software installed on the managed devices - it connects over existing SSH or an API.', 3);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'It cannot make configuration changes', 0, 1),
+(@qq, 'No software has to be installed on the managed devices', 1, 2),
+(@qq, 'It only works on Cisco equipment', 0, 3),
+(@qq, 'It runs entirely in the cloud', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'In "Infrastructure as Code" for networks, where does the source of truth for configuration live?', 'mcq',
+        'In a version-control repository (Git), so every change is a reviewed, revertible commit with history.', 4);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'On each device''s running config', 0, 1),
+(@qq, 'In a Git repository', 1, 2),
+(@qq, 'In an SNMP MIB', 0, 3),
+(@qq, 'In the DHCP server', 0, 4);
+
+INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+VALUES (@q, 'In a controller-based (SDN) network, which API does an operator or app use to express intent to the controller?', 'mcq',
+        'The northbound API. The controller then uses southbound protocols (NETCONF, OpenFlow, vendor APIs) to configure the devices.', 5);
+SET @qq := LAST_INSERT_ID();
+INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order) VALUES
+(@qq, 'The southbound API', 0, 1),
+(@qq, 'The northbound API', 1, 2),
+(@qq, 'SNMP traps', 0, 3),
+(@qq, 'Spanning Tree', 0, 4);
+
 
 -- ===========================================================================
 SELECT
