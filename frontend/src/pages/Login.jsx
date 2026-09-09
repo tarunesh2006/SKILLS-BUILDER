@@ -30,14 +30,14 @@ function Diagram() {
         <line
           key={i}
           x1={nodes[a][0]} y1={nodes[a][1]} x2={nodes[b][0]} y2={nodes[b][1]}
-          stroke="#3f6f95" strokeWidth="1" strokeDasharray="3 4"
+          stroke="#9fc0d8" strokeWidth="1" strokeDasharray="3 4"
         />
       ))}
       {nodes.map(([x, y, label], i) => (
         <g key={i}>
-          <circle cx={x} cy={y} r="10" fill="#0e2c47" stroke="#4c88b5" strokeWidth="1.5" />
-          <circle cx={x} cy={y} r="3.5" fill={i === 1 ? '#1aa3e8' : '#6fb6dc'} />
-          <text x={x} y={y + 24} fill="#5f86a3" fontSize="8" textAnchor="middle" letterSpacing="1">
+          <circle cx={x} cy={y} r="10" fill="#ffffff" stroke="#7fabc9" strokeWidth="1.5" />
+          <circle cx={x} cy={y} r="3.5" fill={i === 1 ? '#1aa3e8' : '#7fb4d4'} />
+          <text x={x} y={y + 24} fill="#6b8296" fontSize="8" textAnchor="middle" letterSpacing="1">
             {label}
           </text>
         </g>

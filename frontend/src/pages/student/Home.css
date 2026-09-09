@@ -1,22 +1,23 @@
 /* ── Student landing (post-login) ──────────────────────────────────────── */
 .home-hero {
-  --cyan: #22a7e6;
+  --cyan: #1aa3e8;
   background:
-    radial-gradient(900px 500px at 78% 12%, rgba(34, 167, 230, 0.14), transparent 60%),
-    linear-gradient(180deg, #0c2136 0%, #0a1b2c 100%);
-  color: #e7eef5;
+    radial-gradient(900px 520px at 80% 4%, rgba(26, 163, 232, 0.14), transparent 62%),
+    linear-gradient(180deg, #f4faff 0%, #eef4fa 100%);
+  color: var(--text);
   position: relative;
   overflow: hidden;
+  border-bottom: 1px solid var(--border);
 }
-.home-hero::before {                       /* subtle noise / grid */
+.home-hero::before {                       /* faint grid */
   content: "";
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(16, 33, 51, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 33, 51, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
-  mask-image: radial-gradient(circle at 30% 25%, #000, transparent 80%);
+  mask-image: radial-gradient(circle at 32% 22%, #000, transparent 78%);
 }
 .home-hero__inner {
   position: relative;
@@ -35,13 +36,14 @@
   gap: 8px;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #ffffff;
+  border: 1px solid var(--border-strong);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #cfe4f2;
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
 }
 .home-hero h1 {
   margin: 22px 0 0;
@@ -49,7 +51,7 @@
   line-height: 0.98;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #fff;
+  color: var(--text-strong);
 }
 .home-hero h1 span { display: block; color: var(--cyan); }
 .home-hero__lede {
@@ -57,7 +59,7 @@
   max-width: 44ch;
   font-size: 16px;
   line-height: 1.6;
-  color: #a7bccd;
+  color: var(--muted);
 }
 .home-cta {
   margin-top: 30px;
@@ -73,17 +75,17 @@
   padding: 13px 24px;
   border-radius: 999px;
   background: var(--cyan);
-  color: #06263a;
+  color: #ffffff;
   font-weight: 700;
   text-decoration: none;
 }
-.home-cta .btn-primary:hover { background: #38b4ef; }
+.home-cta .btn-primary:hover { background: #1391d1; }
 .home-cta .btn-ghost {
-  color: #cfe0ee;
+  color: var(--accent);
   font-weight: 600;
   text-decoration: none;
 }
-.home-cta .btn-ghost:hover { color: #fff; }
+.home-cta .btn-ghost:hover { color: var(--accent-hover); }
 
 .home-social {
   position: relative;
@@ -93,7 +95,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #93aabd;
+  color: var(--muted);
   font-size: 13px;
 }
 .home-avatars { display: flex; }
@@ -105,20 +107,21 @@
   place-items: center;
   font-size: 10px;
   font-weight: 700;
-  color: #06263a;
-  background: #7fcdee;
-  border: 2px solid #0b1c2d;
+  color: #ffffff;
+  background: #4bb4e6;
+  border: 2px solid #f2f7fb;
   margin-left: -8px;
 }
 .home-avatars span:first-child { margin-left: 0; }
-.home-social strong { color: #d7e6f1; }
+.home-social strong { color: var(--text); }
 
-/* code card */
+/* code card — stays dark (reads as a real editor screenshot) */
 .codecard {
+  --cyan: #38b6f0;
   border-radius: 14px;
   background: #0b1725;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.6);
+  border: 1px solid #16273b;
+  box-shadow: 0 24px 55px -18px rgba(16, 33, 51, 0.35);
   overflow: hidden;
   position: relative;
 }
@@ -188,10 +191,11 @@
   padding: 6px 12px;
   border-radius: 999px;
   background: #10283e;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   font-size: 12px;
   font-weight: 600;
   color: #ffd27a;
+  box-shadow: var(--shadow-sm);
 }
 .codecard__toast {
   position: absolute;
@@ -203,7 +207,8 @@
   padding: 10px 14px;
   border-radius: 12px;
   background: #10283e;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: var(--shadow);
 }
 .codecard__toast i {
   display: grid; place-items: center;
@@ -213,7 +218,7 @@
 .codecard__toast strong { display: block; font-size: 12.5px; color: #e7eef5; }
 .codecard__toast span { display: block; font-size: 11px; color: #8ba1b2; }
 
-/* tracks section (light) */
+/* tracks section */
 .home-tracks {
   max-width: 1180px;
   margin: 0 auto;
@@ -229,17 +234,18 @@
   background: var(--panel);
   text-decoration: none;
   color: var(--text);
-  transition: border-color .15s, transform .15s;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .15s, transform .15s, box-shadow .15s;
 }
-.home-track:hover { border-color: var(--brand); transform: translateY(-2px); }
+.home-track:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
 .home-track__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .home-track__top h3 { margin: 0; font-size: 16px; }
 .home-track p { margin: 8px 0 0; color: var(--muted); font-size: 13.5px; }
 .home-track__bar {
   margin-top: 14px; height: 6px; border-radius: 999px;
-  background: var(--accent-weak); overflow: hidden;
+  background: var(--bg-2); overflow: hidden;
 }
-.home-track__bar > span { display: block; height: 100%; background: var(--brand); }
+.home-track__bar > span { display: block; height: 100%; background: var(--accent); }
 .home-track small { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
 
 @media (max-width: 860px) {

@@ -1,18 +1,18 @@
 /* ── Skill Builder split-screen sign-in ─────────────────────────────────── */
 .auth {
-  --sb-blue: #1aa3e8;
-  --sb-blue-dark: #1587c4;
+  --sb-blue: #1184c7;
+  --sb-blue-dark: #0f74af;
   --sb-ink: #16232f;
-  --sb-muted: #6b7a8d;
-  --sb-field: #f1f4f8;
-  --sb-border: #e3e8ee;
+  --sb-muted: #5c6b7a;
+  --sb-field: #f2f5f9;
+  --sb-border: #dbe2ea;
   display: flex;
   min-height: 100vh;
   background: #fff;
   color: var(--sb-ink);
 }
 
-/* left brand panel */
+/* left brand panel (light) */
 .auth__brand {
   flex: 1 1 50%;
   position: relative;
@@ -21,10 +21,11 @@
   justify-content: space-between;
   gap: 32px;
   padding: 48px 56px;
-  color: #eaf2f9;
+  color: var(--sb-ink);
   background:
-    radial-gradient(1200px 600px at 15% 0%, #12385a 0%, rgba(18, 56, 90, 0) 60%),
-    linear-gradient(160deg, #0c2740 0%, #0a1c2e 55%, #081724 100%);
+    radial-gradient(1100px 620px at 12% -6%, #dff0fb 0%, rgba(223, 240, 251, 0) 60%),
+    linear-gradient(160deg, #eef6fc 0%, #e5eff8 55%, #dce9f3 100%);
+  border-right: 1px solid var(--sb-border);
   overflow: hidden;
 }
 .auth__brand::before {           /* faint grid */
@@ -32,22 +33,22 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(16, 33, 51, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 33, 51, 0.045) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(circle at 40% 40%, #000 0%, transparent 78%);
 }
 .auth__brand > * { position: relative; z-index: 1; }
 
-.auth__logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; }
+.auth__logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; color: var(--sb-ink); }
 .auth__logo svg { display: block; }
 
-.auth__diagram { align-self: center; width: min(360px, 80%); opacity: 0.9; }
+.auth__diagram { align-self: center; width: min(360px, 80%); }
 
-.auth__headline { margin: 0; font-size: clamp(34px, 4vw, 52px); line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; }
+.auth__headline { margin: 0; font-size: clamp(34px, 4vw, 52px); line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; color: #101720; }
 .auth__headline span { color: var(--sb-blue); display: block; }
-.auth__tagline { margin: 18px 0 0; max-width: 42ch; color: #a9bfd0; font-size: 15px; line-height: 1.6; }
-.auth__copyright { margin: 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #5c7387; }
+.auth__tagline { margin: 18px 0 0; max-width: 42ch; color: #4d6072; font-size: 15px; line-height: 1.6; }
+.auth__copyright { margin: 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #7c93a6; }
 
 /* right form panel */
 .auth__panel {

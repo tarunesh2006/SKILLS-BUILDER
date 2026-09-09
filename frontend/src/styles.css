@@ -1,27 +1,29 @@
 :root {
-  /* Skill Builder — dark theme */
-  --bg: #0a1826;
-  --bg-2: #0c1f33;
-  --panel: #0f2338;
-  --panel-2: #14293f;
-  --border: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --text: #dce7f1;
-  --text-strong: #ffffff;
-  --muted: #8ba1b3;
-  --accent: #22a7e6;
-  --accent-hover: #3ab6f0;
-  --accent-ink: #06263a;
-  --accent-weak: rgba(34, 167, 230, 0.14);
-  --ok: #4fd08a;
-  --ok-weak: rgba(79, 208, 138, 0.15);
-  --warn: #ffc061;
-  --warn-weak: rgba(255, 192, 97, 0.16);
-  --err: #ff7a70;
-  --err-weak: rgba(255, 122, 112, 0.16);
-  --brand: #22a7e6;
+  /* Skill Builder - light theme */
+  --bg: #f6f8fb;
+  --bg-2: #eef2f7;
+  --panel: #ffffff;
+  --panel-2: #f4f7fb;
+  --border: #e3e8ef;
+  --border-strong: #cfd7e2;
+  --text: #1e2733;
+  --text-strong: #101720;
+  --muted: #5c6b7a;
+  --accent: #1184c7;          /* readable on white for links / buttons */
+  --accent-hover: #0f74af;
+  --accent-ink: #ffffff;      /* text on an accent-filled surface */
+  --accent-weak: #e7f3fb;     /* tinted hover / selected background */
+  --ok: #1a7f4b;
+  --ok-weak: #e4f4ec;
+  --warn: #a26200;
+  --warn-weak: #fbf1e0;
+  --err: #c5362c;
+  --err-weak: #fdeceb;
+  --brand: #1aa3e8;           /* the bright brand cyan - decorative accents */
   --navy: #0c1f33;
-  color-scheme: dark;
+  --shadow-sm: 0 1px 2px rgba(16, 33, 51, 0.06);
+  --shadow: 0 6px 20px rgba(16, 33, 51, 0.08);
+  color-scheme: light;
 }
 * { box-sizing: border-box; }
 body {
@@ -42,6 +44,7 @@ h1, h2, h3 { line-height: 1.25; color: var(--text-strong); }
   border-radius: 12px;
   padding: 18px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
 }
 .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 
@@ -56,30 +59,30 @@ button, .btn {
   color: var(--accent-ink);
   transition: background .14s, border-color .14s, opacity .14s;
 }
-button:hover, .btn:hover { background: var(--accent-hover); text-decoration: none; }
+button:hover, .btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); text-decoration: none; }
 button.secondary, .btn.secondary {
-  background: transparent;
+  background: #fff;
   color: var(--accent);
 }
-button.secondary:hover, .btn.secondary:hover { background: var(--accent-weak); }
-button:disabled { opacity: .45; cursor: not-allowed; }
+button.secondary:hover, .btn.secondary:hover { background: var(--accent-weak); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: not-allowed; }
 
 input, select, textarea {
   font: inherit;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 9px;
-  background: var(--panel-2);
+  background: #fff;
   color: var(--text);
 }
-input::placeholder, textarea::placeholder { color: #5f7688; }
+input::placeholder, textarea::placeholder { color: #90a0af; }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-weak);
 }
-select option { background: #0f2338; }
+select option { background: #fff; color: var(--text); }
 textarea { min-height: 130px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.6; }
 label { display: block; margin: 12px 0 5px; font-weight: 600; font-size: 13px; color: var(--text); }
 /* uppercase field-label treatment, opt-in */
@@ -88,9 +91,9 @@ label { display: block; margin: 12px 0 5px; font-weight: 600; font-size: 13px; c
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
 th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+tbody tr:hover { background: var(--panel-2); }
 
-.bar { height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; }
+.bar { height: 8px; background: var(--bg-2); border-radius: 999px; overflow: hidden; }
 .bar > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
 
 .badge {
@@ -106,32 +109,34 @@ tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
 .center { min-height: 70vh; display: grid; place-items: center; padding: 24px; }
 .stack > * + * { margin-top: 12px; }
 
+/* Code blocks stay dark - reads as an editor / real screenshot on a light page */
 pre {
-  background: #0a1220;
-  color: #d5e3f0;
+  background: #0f1b2d;
+  color: #dce7f3;
   padding: 14px 16px;
   border-radius: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid #16263c;
   overflow: auto;
   line-height: 1.65;
 }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
 :not(pre) > code {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-2);
   padding: 1px 5px;
   border-radius: 5px;
-  color: #a9e6ff;
+  color: #0c5c8c;
 }
 .markdown { line-height: 1.7; }
 .markdown h1 { font-size: 26px; margin: 0 0 14px; }
 .markdown h2 { font-size: 20px; margin: 26px 0 10px; }
 .markdown h3 { font-size: 16px; margin: 20px 0 8px; }
-.markdown p, .markdown li { color: #c6d5e2; }
+.markdown p, .markdown li { color: var(--text); }
 .markdown pre code { background: none; padding: 0; color: inherit; }
 .markdown table { margin: 14px 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.markdown th { background: rgba(255, 255, 255, 0.04); }
+.markdown th { background: var(--panel-2); }
+.markdown td { color: var(--text); }
 .markdown blockquote {
-  margin: 14px 0; padding: 6px 16px; border-left: 3px solid var(--accent);
-  background: var(--accent-weak); border-radius: 0 8px 8px 0; color: #c6d5e2;
+  margin: 14px 0; padding: 8px 16px; border-left: 3px solid var(--accent);
+  background: var(--accent-weak); border-radius: 0 8px 8px 0; color: var(--text);
 }
 .markdown a { color: var(--accent); }
