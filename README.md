@@ -65,8 +65,10 @@ docker compose up -d
 MYSQL="docker compose exec -T mysql mysql -uroot -proot --default-character-set=utf8mb4 learning_platform"
 $MYSQL < db/schema.sql
 $MYSQL < db/seed.sql                    # 8 tracks + a little sample content
-$MYSQL < db/seed_c_track.sql           # full C track: 10 modules, ~39 lessons, 6 code assessments
-$MYSQL < db/seed_c_module_quizzes.sql  # per-module "check your understanding" quizzes (50 MCQs)
+$MYSQL < db/seed_c_track.sql                    # C track: 10 modules, ~39 lessons, 6 code assessments
+$MYSQL < db/seed_c_module_quizzes.sql           # C per-module quizzes (50 MCQs)
+$MYSQL < db/seed_networking_track.sql           # Networking track: 7 modules, ~29 lessons, 3 MCQ assessments
+$MYSQL < db/seed_networking_module_quizzes.sql  # Networking per-module quizzes (35 MCQs)
 # (schema.sql already includes every table; the db/migrations/*.sql files are
 #  only for upgrading a database created before those features existed.)
 
