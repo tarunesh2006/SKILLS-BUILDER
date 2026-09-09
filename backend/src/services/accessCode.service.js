@@ -1,9 +1,11 @@
 /**
- * Test access codes: unique, time-limited, one-time-use passwords that the admin
- * generates per student per test. Separate from normal login.
+ * Test access codes: unique, one-time-use tokens the admin issues per student
+ * per test. Separate from normal login. Assigning a code = adding the student
+ * to the test.
  *
- * Only a bcrypt hash of each code is stored. The plaintext is returned once at
- * generation time so the admin can export/hand it to the student.
+ * The code is delivered to the student in-app (shown on their Tests page), so
+ * `code_plain` is stored and returned only to that student; `code_hash` still
+ * guards the unlock. Access windows follow the test's own opens_at / closes_at.
  */
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -23,26 +25,42 @@ function randomCode(len = 10) {
 }
 
 /**
- * Create (or regenerate) an access code for one student+test.
- * Returns { studentId, code, expiresAt }. Existing unused codes are replaced.
+ * Assign a test to one student: create (or refresh) their one-time access code.
+ * Existing unused codes are replaced; a code the student has already used is
+ * left alone unless force = true. Returns { studentId, code, expiresAt }.
  */
-async function generate({ testId, studentId, adminId, expiresAt }) {
+async function generate({ testId, studentId, adminId, expiresAt, force = false }) {
+  if (!force) {
+    const used = await db.one(
+      `SELECT id FROM test_access
+        WHERE test_id = :testId AND student_id = :studentId AND used_at IS NOT NULL`,
+      { testId, studentId },
+    );
+    if (used) {
+      const row = await db.one(
+        `SELECT code_plain, expires_at FROM test_access WHERE id = :id`, { id: used.id },
+      );
+      return { studentId, code: row.code_plain, expiresAt: row.expires_at, alreadyUsed: true };
+    }
+  }
+
   const code = randomCode(10);
   const hash = await bcrypt.hash(code, config.bcryptRounds);
   const last4 = code.replace('-', '').slice(-4);
 
   await db.query(
-    `INSERT INTO test_access (test_id, student_id, code_hash, code_last4, expires_at, created_by)
-     VALUES (:testId, :studentId, :hash, :last4, :expiresAt, :adminId)
+    `INSERT INTO test_access (test_id, student_id, code_hash, code_plain, code_last4, expires_at, created_by)
+     VALUES (:testId, :studentId, :hash, :code, :last4, :expiresAt, :adminId)
      ON DUPLICATE KEY UPDATE
        code_hash = VALUES(code_hash),
+       code_plain = VALUES(code_plain),
        code_last4 = VALUES(code_last4),
        expires_at = VALUES(expires_at),
        used_at = NULL,
        revoked_at = NULL,
        created_by = VALUES(created_by),
        created_at = CURRENT_TIMESTAMP`,
-    { testId, studentId, hash, last4, expiresAt, adminId },
+    { testId, studentId, hash, code, last4, expiresAt, adminId },
   );
 
   return { studentId, code, expiresAt };

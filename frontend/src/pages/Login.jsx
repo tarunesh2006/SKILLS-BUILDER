@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api/client';
 import './Login.css';
 
 function Logo() {
@@ -59,8 +60,53 @@ const ROLE_PILL = {
   admin: { icon: '🛠️', text: 'Admin portal — manage content & tests' },
 };
 
+const GIS_SRC = 'https://accounts.google.com/gsi/client';
+
+/** Loads the Google Identity Services script once and renders its button. */
+function GoogleButton({ clientId, onCredential, onError }) {
+  const holder = useRef(null);
+
+  useEffect(() => {
+    if (!clientId) return undefined;
+    let cancelled = false;
+
+    function render() {
+      if (cancelled || !holder.current || !window.google?.accounts?.id) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (resp) => {
+          if (resp?.credential) onCredential(resp.credential);
+          else onError?.('Google did not return a credential');
+        },
+      });
+      holder.current.innerHTML = '';
+      window.google.accounts.id.renderButton(holder.current, {
+        theme: 'outline', size: 'large', width: 320, text: 'continue_with',
+      });
+    }
+
+    const existing = document.querySelector(`script[src="${GIS_SRC}"]`);
+    if (existing && window.google?.accounts?.id) {
+      render();
+    } else if (existing) {
+      existing.addEventListener('load', render, { once: true });
+    } else {
+      const s = document.createElement('script');
+      s.src = GIS_SRC;
+      s.async = true;
+      s.defer = true;
+      s.onload = render;
+      s.onerror = () => onError?.('Could not load Google sign-in');
+      document.head.appendChild(s);
+    }
+    return () => { cancelled = true; };
+  }, [clientId, onCredential, onError]);
+
+  return <div ref={holder} className="auth__gbtn" />;
+}
+
 export default function Login({ defaultRole = 'student' }) {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [role, setRole] = useState(defaultRole);
@@ -70,13 +116,39 @@ export default function Login({ defaultRole = 'student' }) {
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [cfg, setCfg] = useState({ googleClientId: null, passwordLoginEnabled: true });
 
   const isStudent = role === 'student';
+
+  useEffect(() => {
+    api('/auth/config', { auth: false })
+      .then(setCfg)
+      .catch(() => setCfg({ googleClientId: null, passwordLoginEnabled: true }));
+  }, []);
 
   function switchRole(next) {
     setRole(next);
     setError(null);
     setInfo(null);
+  }
+
+  function afterLogin(user) {
+    if (user.role === 'student' && user.needsProfile) {
+      navigate('/complete-profile', { replace: true });
+    } else {
+      navigate(user.role === 'admin' ? '/admin' : '/catalog', { replace: true });
+    }
+  }
+
+  async function onGoogleCredential(credential) {
+    setBusy(true); setError(null); setInfo(null);
+    try {
+      afterLogin(await loginWithGoogle(credential));
+    } catch (err) {
+      setError(err.message || 'Google sign-in failed');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function submit(e) {
@@ -91,14 +163,17 @@ export default function Login({ defaultRole = 'student' }) {
       } else {
         creds = { username: identifier.trim(), password };
       }
-      const user = await login(role, creds);
-      navigate(user.role === 'admin' ? '/admin' : '/catalog', { replace: true });
+      afterLogin(await login(role, creds));
     } catch (err) {
       setError(err.message || 'Sign in failed');
     } finally {
       setBusy(false);
     }
   }
+
+  // students: show the password form only as a fallback when it's still enabled
+  const showPasswordForm = !isStudent || cfg.passwordLoginEnabled;
+  const showGoogle = isStudent && !!cfg.googleClientId;
 
   return (
     <div className="auth">
@@ -132,70 +207,80 @@ export default function Login({ defaultRole = 'student' }) {
             {ROLE_PILL[role].text}
           </div>
 
+          {error && <p className="auth__error">{error}</p>}
+
           {isStudent && (
             <>
-              <button type="button" className="auth__oauth"
-                onClick={() => setInfo('Google sign-in isn’t configured yet — use your email and password below.')}>
-                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.57c2.08-1.92 3.27-4.74 3.27-8.09Z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.76c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.15-4.53H2.18v2.84A11 11 0 0 0 12 23Z" />
-                  <path fill="#FBBC05" d="M5.85 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.67-2.84Z" />
-                  <path fill="#EA4335" d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.4 14.97.5 12 .5A11 11 0 0 0 2.18 7.06l3.67 2.84C6.71 6.68 9.14 4.75 12 4.75Z" />
-                </svg>
-                Continue with Google
-              </button>
-              <div className="auth__divider">or sign in with email</div>
+              {showGoogle ? (
+                <>
+                  <GoogleButton
+                    clientId={cfg.googleClientId}
+                    onCredential={onGoogleCredential}
+                    onError={setError}
+                  />
+                  <p className="auth__sub" style={{ textAlign: 'center', margin: '10px 0 0' }}>
+                    Students sign in with their college Google account.
+                  </p>
+                </>
+              ) : (
+                <p className="auth__info">
+                  Google sign-in isn’t configured on this server yet
+                  {cfg.passwordLoginEnabled ? ' — use your email and password below.' : '.'}
+                </p>
+              )}
+              {showGoogle && showPasswordForm && <div className="auth__divider">or sign in with email</div>}
             </>
           )}
 
-          {error && <p className="auth__error">{error}</p>}
+          {showPasswordForm && (
+            <>
+              <div className="auth__field">
+                <label htmlFor="auth-id">{isStudent ? 'Email or roll number' : 'Username'}</label>
+                <div className="auth__input">
+                  <input
+                    id="auth-id"
+                    type="text"
+                    inputMode={isStudent ? 'email' : 'text'}
+                    autoComplete="username"
+                    placeholder={isStudent ? 'you@university.edu' : 'admin'}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-          <div className="auth__field">
-            <label htmlFor="auth-id">{isStudent ? 'Email address' : 'Username'}</label>
-            <div className="auth__input">
-              <input
-                id="auth-id"
-                type={isStudent ? 'text' : 'text'}
-                inputMode={isStudent ? 'email' : 'text'}
-                autoComplete={isStudent ? 'username' : 'username'}
-                placeholder={isStudent ? 'you@university.edu' : 'admin'}
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                required
-                autoFocus
-              />
-            </div>
-          </div>
+              <div className="auth__field">
+                <div className="auth__labelrow">
+                  <label htmlFor="auth-pw">Password</label>
+                  <a href="#" onClick={(e) => {
+                    e.preventDefault();
+                    setInfo('Password reset isn’t available yet — contact your administrator.');
+                  }}>Forgot password?</a>
+                </div>
+                <div className="auth__input auth__input--pw">
+                  <input
+                    id="auth-pw"
+                    type={showPw ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button type="button" className="auth__eye"
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPw((s) => !s)}>
+                    <EyeIcon off={showPw} />
+                  </button>
+                </div>
+              </div>
 
-          <div className="auth__field">
-            <div className="auth__labelrow">
-              <label htmlFor="auth-pw">Password</label>
-              <a href="#" onClick={(e) => {
-                e.preventDefault();
-                setInfo('Password reset isn’t available yet — contact your administrator.');
-              }}>Forgot password?</a>
-            </div>
-            <div className="auth__input auth__input--pw">
-              <input
-                id="auth-pw"
-                type={showPw ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <button type="button" className="auth__eye"
-                aria-label={showPw ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPw((s) => !s)}>
-                <EyeIcon off={showPw} />
+              <button className="auth__submit" disabled={busy}>
+                {busy ? 'Signing in…' : 'Sign In'}
               </button>
-            </div>
-          </div>
-
-          <button className="auth__submit" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign In'}
-          </button>
+            </>
+          )}
 
           {info && <p className="auth__info">{info}</p>}
 

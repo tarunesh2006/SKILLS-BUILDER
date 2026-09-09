@@ -9,6 +9,7 @@ CREATE DATABASE IF NOT EXISTS learning_platform
 USE learning_platform;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS item_submissions;
 DROP TABLE IF EXISTS submission_results;
 DROP TABLE IF EXISTS submissions;
 DROP TABLE IF EXISTS test_access;
@@ -34,18 +35,20 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE users (
   id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   role          ENUM('student','admin') NOT NULL,
-  -- students authenticate with roll_number; admins with username
+  -- admins sign in with a username + password; students sign in with Google
+  -- (or, as a hidden fallback, email/roll number + password) and then set a
+  -- username + roll number on first login
   roll_number   VARCHAR(32)  NULL UNIQUE,
   username      VARCHAR(64)  NULL UNIQUE,
   full_name     VARCHAR(120) NOT NULL,
   email         VARCHAR(190) NULL UNIQUE,
+  google_sub    VARCHAR(40)  NULL UNIQUE,   -- Google account id, set on Google sign-in
   password_hash VARCHAR(255) NOT NULL,
   is_active     TINYINT(1) NOT NULL DEFAULT 1,
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT chk_identity CHECK (
-    (role = 'student' AND roll_number IS NOT NULL) OR
-    (role = 'admin'   AND username    IS NOT NULL)
+    (role = 'admin' AND username IS NOT NULL) OR role = 'student'
   )
 ) ENGINE=InnoDB;
 
@@ -191,6 +194,8 @@ CREATE TABLE tests (
   duration_minutes INT NULL,           -- per-attempt time limit once unlocked
   total_points  INT NOT NULL DEFAULT 0,
   is_published  TINYINT(1) NOT NULL DEFAULT 0,
+  show_leaderboard TINYINT(1) NOT NULL DEFAULT 1,
+  scoring       ENUM('best','last') NOT NULL DEFAULT 'best',  -- which submission counts per item
   created_by    BIGINT UNSIGNED NOT NULL,
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -249,8 +254,8 @@ CREATE TABLE test_access (
   id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   test_id       BIGINT UNSIGNED NOT NULL,
   student_id    BIGINT UNSIGNED NOT NULL,
-  -- only the hash is stored; the plaintext code is shown once at generation/export
-  code_hash     VARCHAR(255) NOT NULL,
+  code_hash     VARCHAR(255) NOT NULL,     -- checked on unlock
+  code_plain    VARCHAR(24) NULL,          -- shown in-app to that student only
   code_last4    CHAR(4) NOT NULL,          -- for admin-side identification in reports
   expires_at    TIMESTAMP NOT NULL,
   used_at       TIMESTAMP NULL,            -- set on first successful unlock -> one-time use
@@ -264,18 +269,23 @@ CREATE TABLE test_access (
   INDEX idx_access_student (student_id)
 ) ENGINE=InnoDB;
 
--- One row per student attempt at a test (created when the access code unlocks it).
+-- One participation record per (test, student), created when the test unlocks.
+-- Students may submit each item many times during the window; the best (or
+-- last) result per item is rolled up into submission_results.
 CREATE TABLE submissions (
   id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   test_id       BIGINT UNSIGNED NOT NULL,
   student_id    BIGINT UNSIGNED NOT NULL,
   access_id     BIGINT UNSIGNED NOT NULL,
   status        ENUM('in_progress','submitted','graded') NOT NULL DEFAULT 'in_progress',
+  submit_count  INT NOT NULL DEFAULT 0,
   started_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   submitted_at  TIMESTAMP NULL,
+  last_scored_at TIMESTAMP NULL,           -- most recent submission that raised the score
   graded_at     TIMESTAMP NULL,
   score         INT NULL,
   max_score     INT NULL,
+  penalty_seconds INT NOT NULL DEFAULT 0,  -- leaderboard tiebreak: sum of time-to-best per solved item
   UNIQUE KEY uq_attempt (test_id, student_id),
   FOREIGN KEY (test_id)    REFERENCES tests(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -283,7 +293,7 @@ CREATE TABLE submissions (
   INDEX idx_sub_test (test_id)
 ) ENGINE=InnoDB;
 
--- Per-item answer + grading detail for a submission.
+-- The best (or last) result per item for a participation - the scored rollup.
 CREATE TABLE submission_results (
   id             BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   submission_id  BIGINT UNSIGNED NOT NULL,
@@ -300,10 +310,38 @@ CREATE TABLE submission_results (
   points_possible INT NOT NULL DEFAULT 0,
   needs_manual_review TINYINT(1) NOT NULL DEFAULT 0,
   graded_at      TIMESTAMP NULL,
+  best_at        TIMESTAMP NULL,           -- when this best score was first reached
+  attempts       INT NOT NULL DEFAULT 0,
+  language       VARCHAR(20) NULL,
   UNIQUE KEY uq_result (submission_id, item_id),
   FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
   FOREIGN KEY (item_id)       REFERENCES test_items(id) ON DELETE CASCADE,
   FOREIGN KEY (selected_option_id) REFERENCES test_item_options(id)
+) ENGINE=InnoDB;
+
+-- Full submission history: one row per Run / Submit of an item.
+CREATE TABLE item_submissions (
+  id             BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  submission_id  BIGINT UNSIGNED NOT NULL,
+  item_id        BIGINT UNSIGNED NOT NULL,
+  student_id     BIGINT UNSIGNED NOT NULL,
+  kind           ENUM('run','submit') NOT NULL DEFAULT 'submit',
+  answer_text    MEDIUMTEXT NULL,
+  selected_option_id BIGINT UNSIGNED NULL,
+  language       VARCHAR(20) NULL,
+  cases_total    INT NULL,
+  cases_passed   INT NULL,
+  points_awarded INT NOT NULL DEFAULT 0,
+  points_possible INT NOT NULL DEFAULT 0,
+  verdict        VARCHAR(40) NULL,
+  judge_stdout   MEDIUMTEXT NULL,
+  judge_stderr   MEDIUMTEXT NULL,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+  FOREIGN KEY (item_id)       REFERENCES test_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id)    REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_isub_sub (submission_id, item_id),
+  INDEX idx_isub_item (item_id, kind)
 ) ENGINE=InnoDB;
 
 -- ----------------------------------------------------------------------------

@@ -9,9 +9,9 @@ const db = require('../src/db');
 const config = require('../src/config');
 
 const STUDENTS = [
-  { roll: 'S001', name: 'Asha Rao',      email: 'asha@example.edu' },
-  { roll: 'S002', name: 'Ben Carter',    email: 'ben@example.edu' },
-  { roll: 'S003', name: 'Chitra Menon',  email: 'chitra@example.edu' },
+  { roll: 'S001', name: 'Asha Rao',      email: 'asha@example.edu',   username: 'asha.rao' },
+  { roll: 'S002', name: 'Ben Carter',    email: 'ben@example.edu',    username: 'ben.carter' },
+  { roll: 'S003', name: 'Chitra Menon',  email: 'chitra@example.edu', username: 'chitra.menon' },
 ];
 
 async function upsertUser(row) {
@@ -19,6 +19,7 @@ async function upsertUser(row) {
     `INSERT INTO users (role, roll_number, username, full_name, email, password_hash)
      VALUES (:role, :roll, :username, :name, :email, :hash)
      ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), email = VALUES(email),
+                             username = VALUES(username),
                              password_hash = VALUES(password_hash), is_active = 1`,
     row,
   );
@@ -36,7 +37,7 @@ async function main() {
   for (const s of STUDENTS) {
     // eslint-disable-next-line no-await-in-loop
     await upsertUser({
-      role: 'student', roll: s.roll, username: null,
+      role: 'student', roll: s.roll, username: s.username,
       name: s.name, email: s.email, hash: studentHash,
     });
     console.log(`student: ${s.roll} / ${config.seed.studentPassword}`);

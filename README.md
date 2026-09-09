@@ -23,12 +23,12 @@ coding tracks.
 
 | Layer | What it does |
 |-------|--------------|
-| **1. Access** | Separate login for students (roll number + password) and admin (restricted) |
+| **1. Access** | Students sign in with **Google** (college account); on first login they set a username + roll number. Email/password stays as a hidden fallback for demo accounts. Admins sign in by username + password. |
 | **2. Course delivery** | Catalog of 8 tracks, text lessons with code snippets, a per-module *"check your understanding"* MCQ quiz (retakeable, immediate feedback), and **automatic completion** — a module is marked complete once the student has opened every lesson in it *and* passed its quiz. No manual "mark complete". |
-| **3. Test module** | A **separate** admin-managed component: test bank (I/O pairs for coding tracks, MCQ/short-answer for the rest), per-student one-time time-limited access-code gate, sandboxed judge engine |
-| **4. Admin panel** | Content CRUD (incl. module quiz questions), test creator + access-code export, and progress / module-quiz / test-score reports |
+| **3. Test module (contest-style)** | Admin-built contests: a scheduled open/close window + per-attempt time limit, per-student one-time access **token delivered in-app** (shown on the student's *My tests* page with one-click Start), per-question **Run** (sample cases, unscored) and **Submit** (all cases, scored), **multiple submissions** with best-or-last scoring, and a live **leaderboard** ranked by score then time penalty. Sandboxed judge engine. |
+| **4. Admin panel** | Content CRUD (incl. module quiz questions), a tabbed test editor (Details / Questions / Participants / Leaderboard / Statistics), and progress / module-quiz / test-score reports |
 
-> **Two kinds of assessment.** *Module quizzes* live with the course content — short self-checks, no gate, take them anytime. *Tests* are the formal, code-gated exams the admin builds and unlocks per student. They are different tables, different screens, different UI sections.
+> **Two kinds of assessment.** *Module quizzes* live with the course content — short self-checks, no gate, take them anytime. *Tests* are the formal, token-gated contests the admin builds and assigns per student. They are different tables, different screens, different UI sections.
 
 ## Stack
 
@@ -70,7 +70,8 @@ $MYSQL < db/seed_c_module_quizzes.sql           # C per-module quizzes (50 MCQs)
 $MYSQL < db/seed_networking_track.sql           # Networking track: 12 modules, ~49 lessons, 4 MCQ assessments
 $MYSQL < db/seed_networking_module_quizzes.sql  # Networking per-module quizzes (60 MCQs)
 # (schema.sql already includes every table; the db/migrations/*.sql files are
-#  only for upgrading a database created before those features existed.)
+#  only for upgrading a database created before those features existed —
+#  e.g. db/migrations/003_contest_tests.sql adds the contest columns + Google.)
 
 # 3. Backend
 cd backend
@@ -99,8 +100,22 @@ done
 | Admin | username `admin` | `admin123` |
 | Student | email `asha@example.edu` (or roll `S001`) | `student123` |
 
-Students authenticate by university email or roll number; admins by username.
-Change these before any real deployment.
+Admins sign in by username. Students normally sign in with Google; the seeded
+demo students above use the email/password fallback (kept available while
+`ALLOW_PASSWORD_LOGIN` is not `false`). Change these before any real deployment.
+
+### Enabling Google Sign-In for students
+
+1. Google Cloud Console → **APIs & Services → Credentials → Create credentials →
+   OAuth client ID → Web application**.
+2. Add `http://localhost:5173` under **Authorised JavaScript origins**.
+3. Put the client ID in `backend/.env` as `GOOGLE_CLIENT_ID` (and the secret as
+   `GOOGLE_CLIENT_SECRET`), then restart the backend.
+
+The backend verifies the Google ID token itself (no extra npm package). While
+`GOOGLE_CLIENT_ID` is empty the login screen just shows the email/password form.
+On their first Google login a student is sent to **/complete-profile** to choose
+a username and enter their roll number.
 
 ### Adding more users (admins and students)
 
@@ -113,6 +128,24 @@ npm run create-student -- --roll S010 --name "Sam Lee" --email sam@uni.edu --pas
 Omit `--password` and a strong one is generated and printed once. Re-running
 with an existing username/roll updates that account (including its password).
 Pass `--inactive` to create the account disabled.
+
+### Running a contest (test module)
+
+1. **Admin → Tests → New contest / test** — pick a track, set the open/close
+   window, an optional per-attempt time limit, and the scoring mode
+   (keep *best* or *last* submission).
+2. Open it and use the tabs:
+   - **Questions** — add coding questions (stdin → expected stdout, mark some
+     cases *visible sample*) or MCQ / short-answer for non-coding tracks.
+   - **Participants** — assign selected students or *all active students*. Each
+     gets a one-time token; it appears on their **My tests** page automatically.
+   - **Details** — flip **Published** on when it's ready.
+3. **Student → My tests** — the card shows the token, a countdown, and a
+   **Start** button. Inside, each question has **Run** (sample cases, no score)
+   and **Submit** (all cases, scored). Students may submit repeatedly.
+4. **Leaderboard / Statistics** tabs (admin) and the in-test **Leaderboard** tab
+   (student, if enabled) update live — rank is score, then total time-to-best
+   penalty, then who reached the score first.
 
 ---
 

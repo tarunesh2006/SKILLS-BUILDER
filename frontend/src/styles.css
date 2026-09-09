@@ -140,3 +140,68 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   background: var(--accent-weak); border-radius: 0 8px 8px 0; color: var(--text);
 }
 .markdown a { color: var(--accent); }
+
+/* ── Test module (contest-style) ──────────────────────────────────────── */
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.testcard { display: flex; gap: 20px; justify-content: space-between; align-items: flex-start; }
+.testcard__main { min-width: 0; }
+.testcard__head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.testcard__head h3 { margin: 0; }
+.testcard__meta { margin: 6px 0 0; font-size: 13px; }
+.testcard__count { margin: 8px 0 0; font-size: 14px; }
+.testcard__side {
+  flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px;
+  align-items: stretch; text-align: center; min-width: 190px;
+}
+.testcard__token {
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--accent-weak); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 10px;
+}
+.testcard__token code { font-size: 17px; font-weight: 700; letter-spacing: .04em; color: var(--text-strong); }
+.testcard__tokenhint { font-size: 11px; }
+
+@media (max-width: 640px) {
+  .testcard { flex-direction: column; }
+  .testcard__side { min-width: 0; }
+}
+
+/* run bar + tabs */
+.runbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.runbar__right { display: flex; gap: 12px; align-items: center; }
+.runclock {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 20px; font-weight: 700; padding: 4px 10px;
+  background: var(--bg-2); border-radius: 8px; color: var(--text-strong);
+}
+.runclock.is-low { background: var(--err-weak); color: var(--err); }
+
+.runtabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; }
+.runtabs button {
+  background: none; border: none; color: var(--muted);
+  padding: 8px 14px; border-radius: 0; font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.runtabs button:hover { background: var(--panel-2); color: var(--text); }
+.runtabs button.is-on { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* question panel */
+.qpanel__head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
+.qpanel__score { margin-left: auto; font-weight: 700; color: var(--ok); }
+.qpanel__editor { min-height: 220px; }
+.qpanel__samples { margin: 10px 0; }
+.qpanel__samples summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.qpanel__actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.qpanel__hint { font-size: 12px; }
+.qpanel__out { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.qopt { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+.qopt input { width: auto; }
+.qcase { margin-top: 8px; font-size: 13px; }
+.qcase.is-pass { color: var(--ok); }
+.qcase.is-fail { color: var(--err); }
+
+tr.lb-me { background: var(--accent-weak) !important; font-weight: 600; }

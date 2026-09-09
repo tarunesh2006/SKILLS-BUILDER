@@ -39,11 +39,14 @@ export function ProgressBar({ percent }) {
 }
 
 /** Route guard: requires a logged-in user, optionally of a given role. */
-export function RequireAuth({ role, children }) {
+export function RequireAuth({ role, children, allowIncompleteProfile = false }) {
   const { user, loading } = useAuth();
   if (loading) return <Spinner />;
   if (!user) return <Navigate to={role === 'admin' ? '/admin/login' : '/login'} replace />;
   if (role && user.role !== role) return <Navigate to="/" replace />;
+  if (!allowIncompleteProfile && user.role === 'student' && user.needsProfile) {
+    return <Navigate to="/complete-profile" replace />;
+  }
   return children;
 }
 

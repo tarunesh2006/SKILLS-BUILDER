@@ -4,6 +4,7 @@ import SiteHeader from './components/SiteHeader';
 import { useAuth } from './context/AuthContext';
 
 import Login from './pages/Login';
+import CompleteProfile from './pages/CompleteProfile';
 import Home from './pages/student/Home';
 import TrackView from './pages/student/TrackView';
 import LessonView from './pages/student/LessonView';
@@ -21,6 +22,7 @@ function HomeRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'student' && user.needsProfile) return <Navigate to="/complete-profile" replace />;
   return <Navigate to={user.role === 'admin' ? '/admin' : '/catalog'} replace />;
 }
 
@@ -32,6 +34,14 @@ export default function App() {
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<Login key="student-login" defaultRole="student" />} />
         <Route path="/admin/login" element={<Login key="admin-login" defaultRole="admin" />} />
+        <Route
+          path="/complete-profile"
+          element={(
+            <RequireAuth role="student" allowIncompleteProfile>
+              <CompleteProfile />
+            </RequireAuth>
+          )}
+        />
 
         {/* Student */}
         <Route path="/catalog" element={<RequireAuth role="student"><Home /></RequireAuth>} />

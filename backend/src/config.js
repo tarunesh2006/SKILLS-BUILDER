@@ -35,6 +35,15 @@ module.exports = {
   corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173')
     .split(',').map((s) => s.trim()).filter(Boolean),
 
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    // clientSecret is only needed for the auth-code flow; the ID-token (button)
+    // flow verifies against Google's public keys and just needs the client id.
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  },
+  // hidden fallback: student email/roll + password login. Off by default.
+  allowPasswordLogin: process.env.ALLOW_PASSWORD_LOGIN !== 'false',
+
   seed: {
     adminUsername: process.env.SEED_ADMIN_USERNAME || 'admin',
     adminPassword: process.env.SEED_ADMIN_PASSWORD || 'admin123',

@@ -23,13 +23,28 @@ export function AuthProvider({ children }) {
     return d.user;
   }, []);
 
+  // Google Sign-In: exchange the GIS credential (ID token) for our JWT.
+  const loginWithGoogle = useCallback(async (credential) => {
+    const d = await api('/auth/google', { method: 'POST', body: { credential }, auth: false });
+    setToken(d.token);
+    setUser(d.user);
+    return d.user;
+  }, []);
+
+  // First-login profile completion (username + roll number).
+  const completeProfile = useCallback(async ({ username, rollNumber }) => {
+    const d = await api('/auth/profile', { method: 'PUT', body: { username, rollNumber } });
+    setUser(d.user);
+    return d.user;
+  }, []);
+
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, completeProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );

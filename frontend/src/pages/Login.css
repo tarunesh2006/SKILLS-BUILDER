@@ -224,3 +224,11 @@
     margin-bottom: 20px;
   }
 }
+
+/* Google Identity Services button holder */
+.auth__gbtn {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 2px;
+  min-height: 40px;
+}
