@@ -6,6 +6,9 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { body } = require('../utils/validate');
 const accessCodes = require('../services/accessCode.service');
 const grading = require('../services/grading.service');
+const contest = require('../services/contest.service');
+const questionImport = require('../services/questionImport.service');
+const aiAuthor = require('../services/aiAuthor.service');
 
 const router = express.Router();
 router.use(authenticate, requireRole('admin'));
@@ -122,6 +125,114 @@ router.delete('/lessons/:id', asyncHandler(async (req, res) => {
 }));
 
 /* ========================================================================== *
+ *  Module "check your understanding" quizzes (part of course delivery)
+ * ========================================================================== */
+
+const mqMetaSchema = z.object({
+  title: z.string().trim().min(1).max(160).optional(),
+  passPercent: z.coerce.number().int().min(0).max(100).optional(),
+  isPublished: z.boolean().optional(),
+});
+const mqQuestionSchema = z.object({
+  promptMd: z.string().min(1).max(1_000_000),
+  type: z.enum(['mcq', 'multi']).default('mcq'),
+  explanationMd: z.string().max(8000).optional(),
+  sortOrder: z.coerce.number().int().default(0),
+  options: z.array(z.object({
+    label: z.string().min(1).max(600),
+    isCorrect: z.boolean().default(false),
+    sortOrder: z.coerce.number().int().default(0),
+  })).min(2),
+});
+
+// GET /admin/modules/:moduleId/quiz — full quiz incl. correct answers
+router.get('/modules/:moduleId/quiz', asyncHandler(async (req, res) => {
+  const quiz = await db.one(
+    `SELECT * FROM module_quizzes WHERE module_id = :m`, { m: req.params.moduleId },
+  );
+  if (!quiz) return res.json({ quiz: null });
+  const questions = await db.query(
+    `SELECT * FROM module_quiz_questions WHERE quiz_id = :q ORDER BY sort_order, id`,
+    { q: quiz.id },
+  );
+  const opts = questions.length
+    ? await db.query(
+      `SELECT * FROM module_quiz_options WHERE question_id IN (${questions.map(() => '?').join(',')}) ORDER BY sort_order, id`,
+      questions.map((q) => q.id),
+    )
+    : [];
+  res.json({
+    quiz: {
+      ...quiz,
+      questions: questions.map((q) => ({
+        ...q, options: opts.filter((o) => o.question_id === q.id),
+      })),
+    },
+  });
+}));
+
+// PUT /admin/modules/:moduleId/quiz — create or update quiz metadata
+router.put('/modules/:moduleId/quiz', body(mqMetaSchema), asyncHandler(async (req, res) => {
+  const mod = await db.one(`SELECT id FROM modules WHERE id = :id`, { id: req.params.moduleId });
+  if (!mod) throw notFound('Module not found');
+  const { title = 'Check Your Understanding', passPercent = 70, isPublished = true } = req.body;
+  await db.query(
+    `INSERT INTO module_quizzes (module_id, title, pass_percent, is_published)
+     VALUES (:m, :title, :pp, :pub)
+     ON DUPLICATE KEY UPDATE title = VALUES(title),
+       pass_percent = VALUES(pass_percent), is_published = VALUES(is_published)`,
+    { m: req.params.moduleId, title, pp: passPercent, pub: isPublished ? 1 : 0 },
+  );
+  const quiz = await db.one(`SELECT * FROM module_quizzes WHERE module_id = :m`, { m: req.params.moduleId });
+  res.json({ quiz });
+}));
+
+// POST /admin/modules/:moduleId/quiz/questions — add a question + its options
+router.post('/modules/:moduleId/quiz/questions', body(mqQuestionSchema), asyncHandler(async (req, res) => {
+  const q = req.body;
+  if (!q.options.some((o) => o.isCorrect)) throw badRequest('Mark at least one option correct');
+  if (q.type === 'mcq' && q.options.filter((o) => o.isCorrect).length !== 1) {
+    throw badRequest('An mcq question needs exactly one correct option');
+  }
+  const id = await db.transaction(async (conn) => {
+    let [quiz] = await conn.execute(
+      `SELECT id FROM module_quizzes WHERE module_id = :m`, { m: req.params.moduleId },
+    );
+    let quizId = quiz[0] && quiz[0].id;
+    if (!quizId) {
+      const [ins] = await conn.execute(
+        `INSERT INTO module_quizzes (module_id) VALUES (:m)`, { m: req.params.moduleId },
+      );
+      quizId = ins.insertId;
+    }
+    const [qi] = await conn.execute(
+      `INSERT INTO module_quiz_questions (quiz_id, prompt_md, type, explanation_md, sort_order)
+       VALUES (:qid, :prompt, :type, :expl, :sort)`,
+      {
+        qid: quizId, prompt: q.promptMd, type: q.type,
+        expl: q.explanationMd ?? null, sort: q.sortOrder,
+      },
+    );
+    for (const o of q.options) {
+      // eslint-disable-next-line no-await-in-loop
+      await conn.execute(
+        `INSERT INTO module_quiz_options (question_id, label, is_correct, sort_order)
+         VALUES (:q, :label, :correct, :sort)`,
+        { q: qi.insertId, label: o.label, correct: o.isCorrect ? 1 : 0, sort: o.sortOrder },
+      );
+    }
+    return qi.insertId;
+  });
+  res.status(201).json({ id });
+}));
+
+router.delete('/quiz-questions/:id', asyncHandler(async (req, res) => {
+  const r = await db.query(`DELETE FROM module_quiz_questions WHERE id = :id`, { id: req.params.id });
+  if (r.affectedRows === 0) throw notFound('Question not found');
+  res.json({ ok: true });
+}));
+
+/* ========================================================================== *
  *  Test creator — build the test bank, set validity window
  * ========================================================================== */
 
@@ -133,6 +244,8 @@ const testSchema = z.object({
   closesAt: z.string().datetime().optional(),
   durationMinutes: z.coerce.number().int().positive().optional(),
   isPublished: z.boolean().default(false),
+  showLeaderboard: z.boolean().optional(),
+  scoring: z.enum(['best', 'last']).optional(),
 });
 
 router.get('/tests', asyncHandler(async (req, res) => {
@@ -148,15 +261,18 @@ router.post('/tests', body(testSchema), asyncHandler(async (req, res) => {
   const t = req.body;
   const r = await db.query(
     `INSERT INTO tests (track_id, title, instructions, opens_at, closes_at,
-                        duration_minutes, is_published, created_by)
+                        duration_minutes, is_published, show_leaderboard, scoring, created_by)
      VALUES (:trackId, :title, :instructions, :opensAt, :closesAt,
-             :durationMinutes, :isPublished, :createdBy)`,
+             :durationMinutes, :isPublished, :showLeaderboard, :scoring, :createdBy)`,
     {
       trackId: t.trackId, title: t.title, instructions: t.instructions ?? null,
       opensAt: t.opensAt ? new Date(t.opensAt) : null,
       closesAt: t.closesAt ? new Date(t.closesAt) : null,
       durationMinutes: t.durationMinutes ?? null,
-      isPublished: t.isPublished ? 1 : 0, createdBy: req.user.id,
+      isPublished: t.isPublished ? 1 : 0,
+      showLeaderboard: t.showLeaderboard === false ? 0 : 1,
+      scoring: t.scoring || 'best',
+      createdBy: req.user.id,
     },
   );
   res.status(201).json({ id: r.insertId });
@@ -167,12 +283,13 @@ router.put('/tests/:id', body(testSchema.partial()), asyncHandler(async (req, re
     trackId: 'track_id', title: 'title', instructions: 'instructions',
     opensAt: 'opens_at', closesAt: 'closes_at',
     durationMinutes: 'duration_minutes', isPublished: 'is_published',
+    showLeaderboard: 'show_leaderboard', scoring: 'scoring',
   };
   const sets = []; const params = { id: req.params.id };
   for (const [k, col] of Object.entries(map)) {
     if (req.body[k] === undefined) continue;
     sets.push(`${col} = :${k}`);
-    if (k === 'isPublished') params[k] = req.body[k] ? 1 : 0;
+    if (k === 'isPublished' || k === 'showLeaderboard') params[k] = req.body[k] ? 1 : 0;
     else if (k === 'opensAt' || k === 'closesAt') params[k] = req.body[k] ? new Date(req.body[k]) : null;
     else params[k] = req.body[k];
   }
@@ -233,51 +350,137 @@ router.get('/tests/:id/items', asyncHandler(async (req, res) => {
   });
 }));
 
-router.post('/tests/:id/items', body(itemSchema), asyncHandler(async (req, res) => {
-  const it = req.body;
-  const test = await db.one(`SELECT * FROM tests WHERE id = :id`, { id: req.params.id });
-  if (!test) throw notFound('Test not found');
-
-  const id = await db.transaction(async (conn) => {
-    const [ins] = await conn.execute(
-      `INSERT INTO test_items (test_id, type, prompt_md, points, sort_order,
-                               starter_code, expected_answer, grading_mode)
-       VALUES (:tid, :type, :prompt, :points, :sort, :starter, :expected, :grading)`,
+// Insert one validated question (itemSchema shape) inside an open transaction.
+async function insertItemTx(conn, testId, it) {
+  const [ins] = await conn.execute(
+    `INSERT INTO test_items (test_id, type, prompt_md, points, sort_order,
+                             starter_code, expected_answer, grading_mode)
+     VALUES (:tid, :type, :prompt, :points, :sort, :starter, :expected, :grading)`,
+    {
+      tid: testId, type: it.type, prompt: it.promptMd, points: it.points,
+      sort: it.sortOrder ?? 0, starter: it.starterCode ?? null,
+      expected: it.expectedAnswer ?? null, grading: it.gradingMode ?? null,
+    },
+  );
+  const itemId = ins.insertId;
+  for (const o of it.options ?? []) {
+    // eslint-disable-next-line no-await-in-loop
+    await conn.execute(
+      `INSERT INTO test_item_options (item_id, label, is_correct, sort_order)
+       VALUES (:iid, :label, :correct, :sort)`,
+      { iid: itemId, label: o.label, correct: o.isCorrect ? 1 : 0, sort: o.sortOrder ?? 0 },
+    );
+  }
+  for (const c of it.cases ?? []) {
+    // eslint-disable-next-line no-await-in-loop
+    await conn.execute(
+      `INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort_order)
+       VALUES (:iid, :stdin, :expected, :sample, :weight, :sort)`,
       {
-        tid: req.params.id, type: it.type, prompt: it.promptMd, points: it.points,
-        sort: it.sortOrder, starter: it.starterCode ?? null,
-        expected: it.expectedAnswer ?? null, grading: it.gradingMode ?? null,
+        iid: itemId, stdin: c.stdin, expected: c.expectedStdout,
+        sample: c.isSample ? 1 : 0, weight: c.weight ?? 1, sort: c.sortOrder ?? 0,
       },
     );
-    const itemId = ins.insertId;
-    for (const o of it.options ?? []) {
-      // eslint-disable-next-line no-await-in-loop
-      await conn.execute(
-        `INSERT INTO test_item_options (item_id, label, is_correct, sort_order)
-         VALUES (:iid, :label, :correct, :sort)`,
-        { iid: itemId, label: o.label, correct: o.isCorrect ? 1 : 0, sort: o.sortOrder },
-      );
-    }
-    for (const c of it.cases ?? []) {
-      // eslint-disable-next-line no-await-in-loop
-      await conn.execute(
-        `INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort_order)
-         VALUES (:iid, :stdin, :expected, :sample, :weight, :sort)`,
-        {
-          iid: itemId, stdin: c.stdin, expected: c.expectedStdout,
-          sample: c.isSample ? 1 : 0, weight: c.weight, sort: c.sortOrder,
-        },
-      );
-    }
-    await conn.execute(
-      `UPDATE tests SET total_points = (SELECT COALESCE(SUM(points),0) FROM test_items WHERE test_id = :tid)
-       WHERE id = :tid`,
-      { tid: req.params.id },
-    );
+  }
+  return itemId;
+}
+
+async function recalcTotalPoints(conn, testId) {
+  await conn.execute(
+    `UPDATE tests SET total_points = (SELECT COALESCE(SUM(points),0) FROM test_items WHERE test_id = :tid)
+     WHERE id = :tid`,
+    { tid: testId },
+  );
+}
+
+router.post('/tests/:id/items', body(itemSchema), asyncHandler(async (req, res) => {
+  const test = await db.one(`SELECT id FROM tests WHERE id = :id`, { id: req.params.id });
+  if (!test) throw notFound('Test not found');
+  const id = await db.transaction(async (conn) => {
+    const itemId = await insertItemTx(conn, test.id, req.body);
+    await recalcTotalPoints(conn, test.id);
     return itemId;
   });
   res.status(201).json({ id });
 }));
+
+/* ---- import questions without typing --------------------------------------- *
+ *  POST /admin/tests/:id/import/url   -> fetch a page, return a DRAFT question
+ *  POST /admin/tests/:id/import/bulk  -> parse JSON/CSV/Markdown, insert all
+ * -------------------------------------------------------------------------- */
+
+router.post('/tests/:id/import/url',
+  body(z.object({
+    url: z.string().trim().url().max(2000),
+    type: z.enum(['coding', 'mcq', 'short_answer', 'query']).optional(),
+  })),
+  asyncHandler(async (req, res) => {
+    const test = await db.one(`SELECT id FROM tests WHERE id = :id`, { id: req.params.id });
+    if (!test) throw notFound('Test not found');
+    const out = await questionImport.fromUrl(req.body.url, { type: req.body.type });
+    res.json(out);
+  }));
+
+router.post('/tests/:id/import/bulk',
+  body(z.object({
+    format: z.enum(['json', 'csv', 'markdown']),
+    content: z.string().min(1).max(2_000_000),
+    fallbackType: z.enum(['coding', 'mcq', 'short_answer', 'query']).optional(),
+  })),
+  asyncHandler(async (req, res) => {
+    const test = await db.one(`SELECT id FROM tests WHERE id = :id`, { id: req.params.id });
+    if (!test) throw notFound('Test not found');
+
+    const parsed = questionImport.parseBulk(req.body);           // may throw 400
+    const validated = parsed.map((q, i) => {
+      const r = itemSchema.safeParse(q);
+      if (!r.success) throw badRequest(`Question ${i + 1}: ${Object.values(r.error.flatten().fieldErrors).flat()[0] || 'invalid'}`);
+      return r.data;
+    });
+
+    const created = await db.transaction(async (conn) => {
+      const ids = [];
+      for (const q of validated) {
+        // eslint-disable-next-line no-await-in-loop
+        ids.push(await insertItemTx(conn, test.id, q));
+      }
+      await recalcTotalPoints(conn, test.id);
+      return ids;
+    });
+    res.status(201).json({ created: created.length, ids: created });
+  }));
+
+// AI question author (talks to a local model, no API key) --------------------
+router.get('/ai/status', asyncHandler(async (_req, res) => {
+  res.json(await aiAuthor.status());
+}));
+
+router.post('/tests/:id/import/ai',
+  body(z.object({
+    idea: z.string().trim().min(8).max(4000),
+    type: z.enum(['coding', 'mcq', 'short_answer', 'query']).optional(),
+    difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+    sampleCount: z.coerce.number().int().min(1).max(4).optional(),
+    hiddenCount: z.coerce.number().int().min(1).max(12).optional(),
+  })),
+  asyncHandler(async (req, res) => {
+    const test = await db.one(
+      `SELECT t.id, tr.judge_language, tr.kind AS track_kind
+         FROM tests t JOIN tracks tr ON tr.id = t.track_id WHERE t.id = :id`,
+      { id: req.params.id },
+    );
+    if (!test) throw notFound('Test not found');
+    const type = req.body.type || (test.track_kind === 'coding' ? 'coding' : 'mcq');
+    const out = await aiAuthor.generate({
+      idea: req.body.idea,
+      type,
+      judgeLanguage: test.judge_language,
+      difficulty: req.body.difficulty,
+      sampleCount: req.body.sampleCount,
+      hiddenCount: req.body.hiddenCount,
+    });
+    res.json(out);
+  }));
 
 router.delete('/items/:itemId', asyncHandler(async (req, res) => {
   const r = await db.query(`DELETE FROM test_items WHERE id = :id`, { id: req.params.itemId });
@@ -286,63 +489,118 @@ router.delete('/items/:itemId', asyncHandler(async (req, res) => {
 }));
 
 /* ========================================================================== *
- *  Access codes — generate & export unique, time-limited, one-time codes
+ *  Participants — assign students, deliver each one their in-app token
  * ========================================================================== */
 
-const genSchema = z.object({
-  studentIds: z.array(z.coerce.number().int().positive()).min(1),
-  expiresAt: z.string().datetime(),
+const assignSchema = z.object({
+  studentIds: z.array(z.coerce.number().int().positive()).optional(),
+  assignAll: z.boolean().optional(),      // every active student
+  trackId: z.coerce.number().int().positive().optional(),  // every active student in a track's cohort
+  expiresAt: z.string().datetime().optional(),
+}).refine((d) => d.studentIds?.length || d.assignAll || d.trackId, {
+  message: 'Provide studentIds, assignAll, or a trackId',
 });
 
-// POST /admin/tests/:id/access-codes -> generates codes, returns plaintext ONCE
-router.post('/tests/:id/access-codes', body(genSchema), asyncHandler(async (req, res) => {
+// POST /admin/tests/:id/participants -> issue codes; the students see them in-app
+router.post('/tests/:id/participants', body(assignSchema), asyncHandler(async (req, res) => {
   const test = await db.one(`SELECT * FROM tests WHERE id = :id`, { id: req.params.id });
   if (!test) throw notFound('Test not found');
-  const expiresAt = new Date(req.body.expiresAt);
-  if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
-    throw badRequest('expiresAt must be a future date');
+
+  // default expiry: the test's close time, or 7 days out
+  let expiresAt = req.body.expiresAt ? new Date(req.body.expiresAt)
+    : (test.closes_at ? new Date(test.closes_at) : new Date(Date.now() + 7 * 864e5));
+  if (Number.isNaN(expiresAt.getTime())) expiresAt = new Date(Date.now() + 7 * 864e5);
+
+  let ids = req.body.studentIds || [];
+  if (req.body.assignAll || req.body.trackId) {
+    const rows = await db.query(
+      `SELECT id FROM users WHERE role = 'student' AND is_active = 1`,
+    );
+    ids = rows.map((r) => r.id);
   }
+  if (ids.length === 0) throw badRequest('No students to assign');
 
   const students = await db.query(
     `SELECT id, roll_number, full_name FROM users
-      WHERE role = 'student' AND id IN (${req.body.studentIds.map(() => '?').join(',')})`,
-    req.body.studentIds,
+      WHERE role = 'student' AND id IN (${ids.map(() => '?').join(',')})`,
+    ids,
   );
   const byId = Object.fromEntries(students.map((s) => [s.id, s]));
 
-  const issued = [];
-  for (const studentId of req.body.studentIds) {
+  let added = 0;
+  for (const studentId of ids) {
     if (!byId[studentId]) continue;
     // eslint-disable-next-line no-await-in-loop
-    const { code } = await accessCodes.generate({
-      testId: test.id, studentId, adminId: req.user.id, expiresAt,
-    });
-    issued.push({
-      studentId,
-      rollNumber: byId[studentId].roll_number,
-      fullName: byId[studentId].full_name,
-      code,
-      expiresAt,
-    });
+    await accessCodes.generate({ testId: test.id, studentId, adminId: req.user.id, expiresAt });
+    added += 1;
   }
-  res.json({ testId: test.id, testTitle: test.title, expiresAt, codes: issued });
+  res.json({ testId: test.id, assigned: added, expiresAt });
 }));
 
-// GET /admin/tests/:id/access-codes -> status only (no plaintext, it's gone)
-router.get('/tests/:id/access-codes', asyncHandler(async (req, res) => {
+// GET /admin/tests/:id/participants -> assignment + attempt status per student
+router.get('/tests/:id/participants', asyncHandler(async (req, res) => {
   const rows = await db.query(
-    `SELECT ta.student_id, u.roll_number, u.full_name, ta.code_last4,
-            ta.expires_at, ta.used_at, ta.revoked_at, ta.created_at
-       FROM test_access ta JOIN users u ON u.id = ta.student_id
-      WHERE ta.test_id = :tid ORDER BY u.roll_number`,
+    `SELECT u.id AS student_id, u.roll_number, u.full_name, u.username,
+            ta.code_plain, ta.code_last4, ta.expires_at, ta.used_at, ta.revoked_at,
+            s.status AS submission_status, s.score, s.max_score, s.submit_count,
+            s.started_at, s.last_scored_at
+       FROM test_access ta
+       JOIN users u ON u.id = ta.student_id
+  LEFT JOIN submissions s ON s.test_id = ta.test_id AND s.student_id = ta.student_id
+      WHERE ta.test_id = :tid
+      ORDER BY s.score IS NULL, s.score DESC, u.roll_number`,
     { tid: req.params.id },
   );
-  res.json({ codes: rows });
+  res.json({
+    participants: rows.map((r) => ({
+      studentId: r.student_id,
+      rollNumber: r.roll_number,
+      name: r.full_name,
+      username: r.username,
+      code: r.code_plain,
+      codeLast4: r.code_last4,
+      expiresAt: r.expires_at,
+      codeUsed: !!r.used_at,
+      codeRevoked: !!r.revoked_at,
+      status: r.submission_status || 'not_started',
+      score: r.score,
+      maxScore: r.max_score,
+      submitCount: r.submit_count,
+      startedAt: r.started_at,
+      lastScoredAt: r.last_scored_at,
+    })),
+  });
 }));
 
-router.post('/tests/:id/access-codes/:studentId/revoke', asyncHandler(async (req, res) => {
+router.post('/tests/:id/participants/:studentId/revoke', asyncHandler(async (req, res) => {
   await accessCodes.revoke({ testId: req.params.id, studentId: req.params.studentId });
   res.json({ ok: true });
+}));
+
+// GET /admin/tests/:id/leaderboard
+router.get('/tests/:id/leaderboard', asyncHandler(async (req, res) => {
+  const test = await db.one(`SELECT id FROM tests WHERE id = :id`, { id: req.params.id });
+  if (!test) throw notFound('Test not found');
+  res.json({ leaderboard: await contest.leaderboard(test.id) });
+}));
+
+// GET /admin/tests/:id/statistics
+router.get('/tests/:id/statistics', asyncHandler(async (req, res) => {
+  const s = await db.one(
+    `SELECT
+       (SELECT COUNT(*) FROM test_access WHERE test_id = :id)                       AS assigned,
+       (SELECT COUNT(*) FROM submissions WHERE test_id = :id)                       AS started,
+       (SELECT COUNT(*) FROM submissions WHERE test_id = :id AND status <> 'in_progress') AS finished,
+       (SELECT COUNT(DISTINCT student_id) FROM item_submissions
+          WHERE submission_id IN (SELECT id FROM submissions WHERE test_id = :id)
+            AND kind = 'submit')                                                    AS submitted_code,
+       (SELECT COUNT(*) FROM item_submissions
+          WHERE submission_id IN (SELECT id FROM submissions WHERE test_id = :id))   AS total_submissions,
+       (SELECT ROUND(AVG(score), 1) FROM submissions WHERE test_id = :id AND score IS NOT NULL) AS avg_score,
+       (SELECT MAX(score) FROM submissions WHERE test_id = :id)                      AS top_score`,
+    { id: req.params.id },
+  );
+  res.json({ stats: s });
 }));
 
 /* ========================================================================== *
@@ -383,6 +641,29 @@ router.get('/reports/scores', asyncHandler(async (req, res) => {
        JOIN tracks tr ON tr.id = t.track_id
       WHERE ${where.join(' AND ')}
       ORDER BY s.submitted_at DESC`,
+    params,
+  );
+  res.json({ rows });
+}));
+
+// GET /admin/reports/module-quizzes -> per-student module quiz results
+router.get('/reports/module-quizzes', asyncHandler(async (req, res) => {
+  const { studentId, trackId } = req.query;
+  const where = [];
+  const params = {};
+  if (studentId) { where.push('a.student_id = :studentId'); params.studentId = studentId; }
+  if (trackId) { where.push('m.track_id = :trackId'); params.trackId = trackId; }
+  const rows = await db.query(
+    `SELECT u.roll_number, u.full_name, tr.title AS track_title,
+            m.title AS module_title, q.title AS quiz_title,
+            a.score, a.max_score, a.percent, a.passed, a.attempts, a.updated_at
+       FROM module_quiz_attempts a
+       JOIN users u ON u.id = a.student_id
+       JOIN module_quizzes q ON q.id = a.quiz_id
+       JOIN modules m ON m.id = q.module_id
+       JOIN tracks tr ON tr.id = m.track_id
+     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY u.full_name, tr.title, m.sort_order`,
     params,
   );
   res.json({ rows });

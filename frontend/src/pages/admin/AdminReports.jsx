@@ -14,6 +14,7 @@ export default function AdminReports() {
   ).toString();
   const progress = useFetch(`/admin/reports/progress${qs ? `?${qs}` : ''}`, [qs]);
   const scores = useFetch(`/admin/reports/scores${qs ? `?${qs}` : ''}`, [qs]);
+  const moduleQuizzes = useFetch(`/admin/reports/module-quizzes${qs ? `?${qs}` : ''}`, [qs]);
 
   if (tracks.loading || students.loading) return <Spinner />;
 
@@ -43,6 +44,7 @@ export default function AdminReports() {
 
       <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
         <button className={tab === 'progress' ? '' : 'secondary'} onClick={() => setTab('progress')}>Progress</button>
+        <button className={tab === 'moduleQuizzes' ? '' : 'secondary'} onClick={() => setTab('moduleQuizzes')}>Module quizzes</button>
         <button className={tab === 'scores' ? '' : 'secondary'} onClick={() => setTab('scores')}>Test scores</button>
       </div>
 
@@ -60,6 +62,32 @@ export default function AdminReports() {
                   <td><ProgressBar percent={Number(r.percent_complete) || 0} /></td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'moduleQuizzes' && (
+        <div className="card">
+          <ErrorText error={moduleQuizzes.error} />
+          <table>
+            <thead><tr><th>Student</th><th>Track</th><th>Module quiz</th><th>Score</th><th>Result</th><th>Tries</th></tr></thead>
+            <tbody>
+              {moduleQuizzes.data?.rows.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.roll_number} {r.full_name}</td>
+                  <td>{r.track_title}</td>
+                  <td>{r.module_title}</td>
+                  <td>{r.score}/{r.max_score} ({r.percent}%)</td>
+                  <td>{r.passed
+                    ? <span className="badge ok">passed</span>
+                    : <span className="badge err">not passed</span>}</td>
+                  <td>{r.attempts}</td>
+                </tr>
+              ))}
+              {moduleQuizzes.data?.rows.length === 0 && (
+                <tr><td colSpan={6} className="muted">No module-quiz attempts yet.</td></tr>
+              )}
             </tbody>
           </table>
         </div>

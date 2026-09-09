@@ -1,0 +1,239 @@
+/* ── Skill Builder app header (light) ───────────────────────────────────── */
+.sh {
+  --sh-cyan: #1184c7;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.sh-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 24px;
+}
+
+.sh-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text-strong);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sh-logo__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sh-nav {
+  display: flex;
+  gap: 22px;
+  margin-right: auto;
+}
+.sh-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+}
+.sh-nav a:hover { color: var(--text); }
+.sh-nav a.active { color: var(--text-strong); border-bottom-color: var(--sh-cyan); }
+
+/* ── user badge (top-right) ─────────────────────────────────────────────── */
+.sh-badge-wrap { position: relative; }
+
+.sh-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.sh-badge:hover, .sh-badge.is-open {
+  background: var(--accent-weak);
+  border-color: var(--sh-cyan);
+}
+.sh-badge__avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(150deg, #2a94cf, #14507a);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  flex: none;
+}
+.sh-badge__text { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
+.sh-badge__text b { font-size: 13px; font-weight: 600; color: var(--text-strong); }
+.sh-badge__text i { font-size: 11px; font-style: normal; color: var(--muted); }
+.sh-badge__caret { color: var(--muted); flex: none; }
+
+/* ── profile panel ─────────────────────────────────────────────────────── */
+.sh-panel-scrim { position: fixed; inset: 0; z-index: 60; }
+
+.sh-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  z-index: 70;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(16, 33, 51, 0.16);
+  overflow: hidden;
+}
+
+.sh-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+.sh-panel__avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: linear-gradient(150deg, #2a94cf, #14507a);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  flex: none;
+}
+.sh-panel__id { flex: 1; min-width: 0; }
+.sh-panel__id strong { display: block; font-size: 15px; color: var(--text-strong); }
+.sh-panel__id span { display: block; font-size: 12px; color: var(--muted); }
+
+.sh-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--sh-cyan);
+  border-radius: 999px;
+  background: var(--sh-cyan);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  flex: none;
+}
+.sh-logout:hover { background: var(--accent-hover); }
+
+.sh-sec { padding: 10px 8px; border-bottom: 1px solid var(--border); }
+.sh-sec:last-child { border-bottom: 0; }
+.sh-sec__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sh-sec__icon { color: var(--muted); }
+
+.sh-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+}
+.sh-row:hover { background: var(--accent-weak); color: var(--accent-hover); text-decoration: none; }
+.sh-row.active { color: var(--accent); font-weight: 600; }
+.sh-row__chev { color: var(--muted); }
+
+.sh-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.sh-kv span { color: var(--muted); }
+.sh-kv b { color: var(--text); font-weight: 600; word-break: break-all; text-align: right; }
+
+@media (max-width: 560px) {
+  .sh-badge__text { display: none; }
+  .sh-badge { padding: 4px; }
+}
+
+/* track strip */
+.sh-tracks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sh-tracks::-webkit-scrollbar { display: none; }
+.sh-tracks__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  margin-right: 6px;
+}
+.sh-chip {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #46545f;
+  text-decoration: none;
+  background: var(--bg-2);
+  border: 1px solid transparent;
+}
+.sh-chip:hover { background: var(--accent-weak); color: var(--accent-hover); }
+.sh-chip.active {
+  background: var(--sh-cyan);
+  color: #ffffff;
+}
+
+@media (max-width: 720px) {
+  .sh-nav { display: none; }
+  .sh-bar { gap: 14px; }
+}

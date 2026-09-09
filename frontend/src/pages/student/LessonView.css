@@ -1,0 +1,90 @@
+.lv {
+  --cyan: #1184c7;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 26px 20px 60px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 30px;
+}
+
+.lv-rail { position: sticky; top: 110px; align-self: start; }
+.lv-rail__back { display: inline-block; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
+.lv-rail__back:hover { color: var(--accent); }
+.lv-rail h4 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.lv-rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.lv-rail a {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  line-height: 1.35;
+}
+.lv-rail a:hover { background: var(--panel-2); color: var(--text); }
+.lv-rail a.active { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+.lv-rail a .mk { flex: none; width: 15px; color: var(--ok); }
+
+.lv-article {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 34px 40px 30px;
+  box-shadow: var(--shadow-sm);
+}
+.lv-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.lv-article > h1 { margin: 10px 0 20px; font-size: 30px; letter-spacing: -0.02em; }
+
+.lv-foot {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lv-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ok);
+  font-weight: 600;
+}
+.lv-foot .lv-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.lv-foot .lv-next:hover { background: var(--accent-hover); }
+.lv-foot .lv-prev { font-size: 13px; color: var(--muted); text-decoration: none; }
+.lv-foot .lv-prev:hover { color: var(--accent); }
+
+@media (max-width: 820px) {
+  .lv { grid-template-columns: 1fr; }
+  .lv-rail { position: static; }
+  .lv-article { padding: 24px 20px; }
+}

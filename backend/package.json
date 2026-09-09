@@ -8,6 +8,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "seed": "node scripts/seed.js",
+    "create-admin": "node scripts/create-user.js --role admin",
+    "create-student": "node scripts/create-user.js --role student",
     "test": "node --test"
   },
   "dependencies": {

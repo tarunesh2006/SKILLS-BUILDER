@@ -130,4 +130,4 @@ async function gradeSubmission(submissionId) {
   return { score, maxScore, needsManualReview: anyManual };
 }
 
-module.exports = { gradeSubmission };
+module.exports = { gradeSubmission, gradeItem, norm };

@@ -1,5 +1,6 @@
-import { NavLink, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuth } from '../context/AuthContext';
 
 export function Spinner({ label = 'Loading…' }) {
@@ -12,7 +13,21 @@ export function ErrorText({ error }) {
 }
 
 export function Markdown({ children }) {
-  return <div className="markdown"><ReactMarkdown>{children || ''}</ReactMarkdown></div>;
+  return (
+    <div className="markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{children || ''}</ReactMarkdown>
+    </div>
+  );
+}
+
+// Inline markdown (no block <p> wrapper) — for option labels, table cells, etc.
+const INLINE_COMPONENTS = { p: ({ children }) => <>{children}</> };
+export function MarkdownInline({ children }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={INLINE_COMPONENTS}>
+      {children || ''}
+    </ReactMarkdown>
+  );
 }
 
 export function ProgressBar({ percent }) {
@@ -24,39 +39,14 @@ export function ProgressBar({ percent }) {
 }
 
 /** Route guard: requires a logged-in user, optionally of a given role. */
-export function RequireAuth({ role, children }) {
+export function RequireAuth({ role, children, allowIncompleteProfile = false }) {
   const { user, loading } = useAuth();
   if (loading) return <Spinner />;
   if (!user) return <Navigate to={role === 'admin' ? '/admin/login' : '/login'} replace />;
   if (role && user.role !== role) return <Navigate to="/" replace />;
+  if (!allowIncompleteProfile && user.role === 'student' && user.needsProfile) {
+    return <Navigate to="/complete-profile" replace />;
+  }
   return children;
 }
 
-export function TopBar() {
-  const { user, logout } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  return (
-    <header className="topbar">
-      <div className="brand">Learning Platform</div>
-      <nav>
-        {user && !isAdmin && (
-          <>
-            <NavLink to="/" end>Catalog</NavLink>
-            <NavLink to="/progress">Progress</NavLink>
-            <NavLink to="/tests">Tests</NavLink>
-          </>
-        )}
-        {isAdmin && (
-          <>
-            <NavLink to="/admin" end>Content</NavLink>
-            <NavLink to="/admin/tests">Tests</NavLink>
-            <NavLink to="/admin/reports">Reports</NavLink>
-          </>
-        )}
-        {user
-          ? <a href="#" onClick={(e) => { e.preventDefault(); logout(); }}>Sign out ({user.fullName})</a>
-          : <NavLink to="/login">Sign in</NavLink>}
-      </nav>
-    </header>
-  );
-}
