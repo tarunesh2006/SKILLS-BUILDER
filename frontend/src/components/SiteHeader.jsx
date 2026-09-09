@@ -71,6 +71,7 @@ function ProfilePanel({ user, roleLabel, onSignOut }) {
           <Row to="/admin" label="Content manager" />
           <Row to="/admin/tests" label="Test creator" />
           <Row to="/admin/reports" label="Reports" />
+          <Row to="/admin/users" label="People & admins" />
         </div>
       ) : (
         <>
@@ -171,6 +172,7 @@ export default function SiteHeader() {
               <NavLink to="/admin" end>Content</NavLink>
               <NavLink to="/admin/tests">Tests</NavLink>
               <NavLink to="/admin/reports">Reports</NavLink>
+              <NavLink to="/admin/users">People</NavLink>
             </>
           ) : (
             <>

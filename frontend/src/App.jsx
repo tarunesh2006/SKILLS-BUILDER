@@ -16,6 +16,7 @@ import AdminContent from './pages/admin/AdminContent';
 import AdminTests from './pages/admin/AdminTests';
 import AdminTestEditor from './pages/admin/AdminTestEditor';
 import AdminReports from './pages/admin/AdminReports';
+import AdminUsers from './pages/admin/AdminUsers';
 
 function HomeRedirect() {
   const { user, loading } = useAuth();
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/admin/tests" element={<RequireAuth role="admin"><AdminTests /></RequireAuth>} />
         <Route path="/admin/tests/:id" element={<RequireAuth role="admin"><AdminTestEditor /></RequireAuth>} />
         <Route path="/admin/reports" element={<RequireAuth role="admin"><AdminReports /></RequireAuth>} />
+        <Route path="/admin/users" element={<RequireAuth role="admin"><AdminUsers /></RequireAuth>} />
 
         <Route path="*" element={<div className="container">Not found. <a href="/">Home</a></div>} />
       </Routes>

@@ -102,6 +102,24 @@ done
 Students authenticate by university email or roll number; admins by username.
 Change these before any real deployment.
 
+### Adding more users (admins and students)
+
+**From the admin panel:** sign in as an admin → **People** → *Add a user*.
+Pick the role, fill in the details, and either type a password or hit
+*Suggest*. The new password is shown once on the confirmation card. The same
+screen lists all users and lets you disable an account or reset a password.
+
+**From the command line** (no UI needed):
+
+```bash
+cd backend
+npm run create-admin   -- --username jane --name "Jane Doe" --password 's3cret!'
+npm run create-student -- --roll S010 --name "Sam Lee" --email sam@uni.edu --password 'pw'
+```
+
+Omit `--password` and a strong one is generated and printed once. Re-running
+with an existing username/roll updates that account (including its password).
+
 ---
 
 ## Judge engine safety
