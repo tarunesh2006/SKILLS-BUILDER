@@ -1,9 +1,7 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const db = require('../db');
-const config = require('../config');
-const { asyncHandler, notFound, badRequest, forbidden } = require('../utils/http');
+const { asyncHandler, notFound, badRequest } = require('../utils/http');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { body } = require('../utils/validate');
 const accessCodes = require('../services/accessCode.service');
@@ -583,100 +581,6 @@ router.get('/students', asyncHandler(async (_req, res) => {
       WHERE role = 'student' ORDER BY roll_number`,
   );
   res.json({ students: rows });
-}));
-
-/* ========================================================================== *
- *  People — create and manage student and admin accounts
- * ========================================================================== */
-
-function publicUser(u) {
-  return {
-    id: u.id, role: u.role, fullName: u.full_name,
-    username: u.username, rollNumber: u.roll_number, email: u.email,
-    isActive: !!u.is_active, createdAt: u.created_at,
-  };
-}
-
-router.get('/users', asyncHandler(async (req, res) => {
-  const rows = await db.query(
-    `SELECT id, role, username, roll_number, full_name, email, is_active, created_at
-       FROM users ORDER BY role, COALESCE(username, roll_number)`,
-  );
-  res.json({ users: rows.map(publicUser) });
-}));
-
-const createUserSchema = z.object({
-  role: z.enum(['student', 'admin']),
-  fullName: z.string().trim().min(1).max(120),
-  username: z.string().trim().min(1).max(64).optional(),
-  rollNumber: z.string().trim().min(1).max(32).optional(),
-  email: z.string().trim().toLowerCase().email().max(190).optional().or(z.literal('')),
-  password: z.string().min(6).max(200),
-  isActive: z.boolean().default(true),
-}).superRefine((d, ctx) => {
-  if (d.role === 'admin' && !d.username) {
-    ctx.addIssue({ code: 'custom', path: ['username'], message: 'Username is required for an admin' });
-  }
-  if (d.role === 'student' && !d.rollNumber) {
-    ctx.addIssue({ code: 'custom', path: ['rollNumber'], message: 'Roll number is required for a student' });
-  }
-});
-
-router.post('/users', body(createUserSchema), asyncHandler(async (req, res) => {
-  const d = req.body;
-  const hash = await bcrypt.hash(d.password, config.bcryptRounds);
-  const r = await db.query(
-    `INSERT INTO users (role, username, roll_number, full_name, email, password_hash, is_active)
-     VALUES (:role, :username, :roll, :name, :email, :hash, :active)`,
-    {
-      role: d.role,
-      username: d.role === 'admin' ? d.username : null,
-      roll: d.role === 'student' ? d.rollNumber : null,
-      name: d.fullName,
-      email: d.email || null,
-      hash,
-      active: d.isActive ? 1 : 0,
-    },
-  );
-  const row = await db.one(
-    `SELECT id, role, username, roll_number, full_name, email, is_active, created_at
-       FROM users WHERE id = :id`, { id: r.insertId },
-  );
-  res.status(201).json({ user: publicUser(row) });
-}));
-
-const updateUserSchema = z.object({
-  fullName: z.string().trim().min(1).max(120).optional(),
-  email: z.string().trim().toLowerCase().email().max(190).optional().or(z.literal('')),
-  password: z.string().min(6).max(200).optional(),
-  isActive: z.boolean().optional(),
-});
-
-router.patch('/users/:id', body(updateUserSchema), asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  const target = await db.one(`SELECT * FROM users WHERE id = :id`, { id });
-  if (!target) throw notFound('User not found');
-  if (id === req.user.id && req.body.isActive === false) {
-    throw forbidden('You cannot deactivate your own account');
-  }
-
-  const sets = [];
-  const params = { id };
-  if (req.body.fullName !== undefined) { sets.push('full_name = :name'); params.name = req.body.fullName; }
-  if (req.body.email !== undefined) { sets.push('email = :email'); params.email = req.body.email || null; }
-  if (req.body.isActive !== undefined) { sets.push('is_active = :active'); params.active = req.body.isActive ? 1 : 0; }
-  if (req.body.password !== undefined) {
-    sets.push('password_hash = :hash');
-    params.hash = await bcrypt.hash(req.body.password, config.bcryptRounds);
-  }
-  if (sets.length === 0) throw badRequest('Nothing to update');
-
-  await db.query(`UPDATE users SET ${sets.join(', ')} WHERE id = :id`, params);
-  const row = await db.one(
-    `SELECT id, role, username, roll_number, full_name, email, is_active, created_at
-       FROM users WHERE id = :id`, { id },
-  );
-  res.json({ user: publicUser(row) });
 }));
 
 module.exports = router;
