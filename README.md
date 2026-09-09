@@ -137,6 +137,22 @@ Pass `--inactive` to create the account disabled.
 2. Open it and use the tabs:
    - **Questions** — add coding questions (stdin → expected stdout, mark some
      cases *visible sample*) or MCQ / short-answer for non-coding tracks.
+     *Or import instead of typing:*
+     - **From a URL** — paste a problem page; the server fetches it and
+       best-effort extracts the statement + visible sample cases into the form
+       for review. (Works well on static problem pages e.g. CSES, Codeforces,
+       Kattis; some sites block bots or need JS — then paste the text into bulk
+       import instead. Only import content you have the right to use.)
+     - **Bulk import** — paste or upload **JSON**, **CSV** or **Markdown** with
+       many questions at once. Formats:
+       - *JSON*: `[{ "type": "coding", "prompt": "...", "points": 30,
+         "cases": [{ "input": "3", "output": "9", "sample": true }] }, ...]`
+         (`mcq` uses `"options": [{ "label": "...", "isCorrect": true }]`).
+       - *CSV* (MCQ): `type,prompt,points,optionA,optionB,optionC,correct`
+         with `correct` as a letter (`B`) or the option text.
+       - *Markdown*: questions separated by a line of `---`, optional first line
+         `@type=mcq points=5`, coding samples as paired ```` ```in ```` / ```` ```out ````
+         fences, MCQ options as `- [x]` / `- [ ]` lines.
    - **Participants** — assign selected students or *all active students*. Each
      gets a one-time token; it appears on their **My tests** page automatically.
    - **Details** — flip **Published** on when it's ready.

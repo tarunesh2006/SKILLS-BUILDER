@@ -7,6 +7,7 @@ const { body } = require('../utils/validate');
 const accessCodes = require('../services/accessCode.service');
 const grading = require('../services/grading.service');
 const contest = require('../services/contest.service');
+const questionImport = require('../services/questionImport.service');
 
 const router = express.Router();
 router.use(authenticate, requireRole('admin'));
@@ -348,51 +349,105 @@ router.get('/tests/:id/items', asyncHandler(async (req, res) => {
   });
 }));
 
-router.post('/tests/:id/items', body(itemSchema), asyncHandler(async (req, res) => {
-  const it = req.body;
-  const test = await db.one(`SELECT * FROM tests WHERE id = :id`, { id: req.params.id });
-  if (!test) throw notFound('Test not found');
-
-  const id = await db.transaction(async (conn) => {
-    const [ins] = await conn.execute(
-      `INSERT INTO test_items (test_id, type, prompt_md, points, sort_order,
-                               starter_code, expected_answer, grading_mode)
-       VALUES (:tid, :type, :prompt, :points, :sort, :starter, :expected, :grading)`,
+// Insert one validated question (itemSchema shape) inside an open transaction.
+async function insertItemTx(conn, testId, it) {
+  const [ins] = await conn.execute(
+    `INSERT INTO test_items (test_id, type, prompt_md, points, sort_order,
+                             starter_code, expected_answer, grading_mode)
+     VALUES (:tid, :type, :prompt, :points, :sort, :starter, :expected, :grading)`,
+    {
+      tid: testId, type: it.type, prompt: it.promptMd, points: it.points,
+      sort: it.sortOrder ?? 0, starter: it.starterCode ?? null,
+      expected: it.expectedAnswer ?? null, grading: it.gradingMode ?? null,
+    },
+  );
+  const itemId = ins.insertId;
+  for (const o of it.options ?? []) {
+    // eslint-disable-next-line no-await-in-loop
+    await conn.execute(
+      `INSERT INTO test_item_options (item_id, label, is_correct, sort_order)
+       VALUES (:iid, :label, :correct, :sort)`,
+      { iid: itemId, label: o.label, correct: o.isCorrect ? 1 : 0, sort: o.sortOrder ?? 0 },
+    );
+  }
+  for (const c of it.cases ?? []) {
+    // eslint-disable-next-line no-await-in-loop
+    await conn.execute(
+      `INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort_order)
+       VALUES (:iid, :stdin, :expected, :sample, :weight, :sort)`,
       {
-        tid: req.params.id, type: it.type, prompt: it.promptMd, points: it.points,
-        sort: it.sortOrder, starter: it.starterCode ?? null,
-        expected: it.expectedAnswer ?? null, grading: it.gradingMode ?? null,
+        iid: itemId, stdin: c.stdin, expected: c.expectedStdout,
+        sample: c.isSample ? 1 : 0, weight: c.weight ?? 1, sort: c.sortOrder ?? 0,
       },
     );
-    const itemId = ins.insertId;
-    for (const o of it.options ?? []) {
-      // eslint-disable-next-line no-await-in-loop
-      await conn.execute(
-        `INSERT INTO test_item_options (item_id, label, is_correct, sort_order)
-         VALUES (:iid, :label, :correct, :sort)`,
-        { iid: itemId, label: o.label, correct: o.isCorrect ? 1 : 0, sort: o.sortOrder },
-      );
-    }
-    for (const c of it.cases ?? []) {
-      // eslint-disable-next-line no-await-in-loop
-      await conn.execute(
-        `INSERT INTO test_cases (item_id, stdin, expected_stdout, is_sample, weight, sort_order)
-         VALUES (:iid, :stdin, :expected, :sample, :weight, :sort)`,
-        {
-          iid: itemId, stdin: c.stdin, expected: c.expectedStdout,
-          sample: c.isSample ? 1 : 0, weight: c.weight, sort: c.sortOrder,
-        },
-      );
-    }
-    await conn.execute(
-      `UPDATE tests SET total_points = (SELECT COALESCE(SUM(points),0) FROM test_items WHERE test_id = :tid)
-       WHERE id = :tid`,
-      { tid: req.params.id },
-    );
+  }
+  return itemId;
+}
+
+async function recalcTotalPoints(conn, testId) {
+  await conn.execute(
+    `UPDATE tests SET total_points = (SELECT COALESCE(SUM(points),0) FROM test_items WHERE test_id = :tid)
+     WHERE id = :tid`,
+    { tid: testId },
+  );
+}
+
+router.post('/tests/:id/items', body(itemSchema), asyncHandler(async (req, res) => {
+  const test = await db.one(`SELECT id FROM tests WHERE id = :id`, { id: req.params.id });
+  if (!test) throw notFound('Test not found');
+  const id = await db.transaction(async (conn) => {
+    const itemId = await insertItemTx(conn, test.id, req.body);
+    await recalcTotalPoints(conn, test.id);
     return itemId;
   });
   res.status(201).json({ id });
 }));
+
+/* ---- import questions without typing --------------------------------------- *
+ *  POST /admin/tests/:id/import/url   -> fetch a page, return a DRAFT question
+ *  POST /admin/tests/:id/import/bulk  -> parse JSON/CSV/Markdown, insert all
+ * -------------------------------------------------------------------------- */
+
+router.post('/tests/:id/import/url',
+  body(z.object({
+    url: z.string().trim().url().max(2000),
+    type: z.enum(['coding', 'mcq', 'short_answer', 'query']).optional(),
+  })),
+  asyncHandler(async (req, res) => {
+    const test = await db.one(`SELECT id FROM tests WHERE id = :id`, { id: req.params.id });
+    if (!test) throw notFound('Test not found');
+    const out = await questionImport.fromUrl(req.body.url, { type: req.body.type });
+    res.json(out);
+  }));
+
+router.post('/tests/:id/import/bulk',
+  body(z.object({
+    format: z.enum(['json', 'csv', 'markdown']),
+    content: z.string().min(1).max(2_000_000),
+    fallbackType: z.enum(['coding', 'mcq', 'short_answer', 'query']).optional(),
+  })),
+  asyncHandler(async (req, res) => {
+    const test = await db.one(`SELECT id FROM tests WHERE id = :id`, { id: req.params.id });
+    if (!test) throw notFound('Test not found');
+
+    const parsed = questionImport.parseBulk(req.body);           // may throw 400
+    const validated = parsed.map((q, i) => {
+      const r = itemSchema.safeParse(q);
+      if (!r.success) throw badRequest(`Question ${i + 1}: ${Object.values(r.error.flatten().fieldErrors).flat()[0] || 'invalid'}`);
+      return r.data;
+    });
+
+    const created = await db.transaction(async (conn) => {
+      const ids = [];
+      for (const q of validated) {
+        // eslint-disable-next-line no-await-in-loop
+        ids.push(await insertItemTx(conn, test.id, q));
+      }
+      await recalcTotalPoints(conn, test.id);
+      return ids;
+    });
+    res.status(201).json({ created: created.length, ids: created });
+  }));
 
 router.delete('/items/:itemId', asyncHandler(async (req, res) => {
   const r = await db.query(`DELETE FROM test_items WHERE id = :id`, { id: req.params.itemId });

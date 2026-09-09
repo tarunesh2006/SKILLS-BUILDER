@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useFetch } from '../useApi';
 import { api } from '../../api/client';
@@ -133,10 +133,23 @@ function Details({ test, onSaved }) {
 /* ---------------------------------------------------------------- Questions */
 function Questions({ testId, trackKind }) {
   const items = useFetch(`/admin/tests/${testId}/items`, [testId]);
+  const [seed, setSeed] = useState(null);
+  const [seedKey, setSeedKey] = useState(0);
+  const formRef = useRef(null);
+
+  function applyDraft(draft) {
+    setSeed(draft);
+    setSeedKey((k) => k + 1);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
   if (items.loading) return <Spinner />;
 
   return (
     <>
+      <ImportPanel testId={testId} trackKind={trackKind}
+        onDraft={applyDraft} onBulkDone={items.reload} />
+
       <ErrorText error={items.error} />
       {(items.data?.items || []).length === 0 && <p className="muted">No questions yet.</p>}
       {items.data?.items.map((it, i) => (
@@ -162,19 +175,128 @@ function Questions({ testId, trackKind }) {
           )}
         </div>
       ))}
-      <AddQuestion testId={testId} trackKind={trackKind} onAdded={items.reload} />
+      <div ref={formRef}>
+        <AddQuestion key={seedKey} seed={seed} testId={testId} trackKind={trackKind} onAdded={items.reload} />
+      </div>
     </>
   );
 }
 
-function AddQuestion({ testId, trackKind, onAdded }) {
+/* --------------------------------------------------- import without typing */
+function ImportPanel({ testId, trackKind, onDraft, onBulkDone }) {
+  const [url, setUrl] = useState('');
+  const [urlBusy, setUrlBusy] = useState(false);
+  const [urlErr, setUrlErr] = useState(null);
+  const [urlNote, setUrlNote] = useState(null);
+
+  const [format, setFormat] = useState('json');
+  const [content, setContent] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkErr, setBulkErr] = useState(null);
+  const [bulkMsg, setBulkMsg] = useState(null);
+
+  async function fetchUrl(e) {
+    e.preventDefault();
+    setUrlBusy(true); setUrlErr(null); setUrlNote(null);
+    try {
+      const d = await api(`/admin/tests/${testId}/import/url`, {
+        method: 'POST',
+        body: { url: url.trim(), type: trackKind === 'coding' ? 'coding' : undefined },
+      });
+      onDraft(d.draft);
+      setUrlNote(`Loaded “${d.detected.title || 'question'}” — ${d.detected.caseCount} sample case(s) found. ${d.note}`);
+    } catch (e2) { setUrlErr(e2); } finally { setUrlBusy(false); }
+  }
+
+  async function pickFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setContent(await file.text());
+    if (/\.json$/i.test(file.name)) setFormat('json');
+    else if (/\.csv$/i.test(file.name)) setFormat('csv');
+    else if (/\.(md|markdown|txt)$/i.test(file.name)) setFormat('markdown');
+  }
+
+  async function importBulk(e) {
+    e.preventDefault();
+    setBulkBusy(true); setBulkErr(null); setBulkMsg(null);
+    try {
+      const d = await api(`/admin/tests/${testId}/import/bulk`, {
+        method: 'POST',
+        body: { format, content, fallbackType: trackKind === 'coding' ? 'coding' : 'mcq' },
+      });
+      setBulkMsg(`Imported ${d.created} question${d.created === 1 ? '' : 's'}.`);
+      setContent('');
+      onBulkDone();
+    } catch (e2) { setBulkErr(e2); } finally { setBulkBusy(false); }
+  }
+
+  const placeholder = {
+    json: '[\n  { "type": "coding", "prompt": "Read n, print n*n", "points": 30,\n    "cases": [ { "input": "3", "output": "9", "sample": true }, { "input": "8", "output": "64" } ] },\n  { "type": "mcq", "prompt": "Which is a keyword?", "points": 5,\n    "options": [ { "label": "for", "isCorrect": true }, { "label": "banana" } ] }\n]',
+    csv: 'type,prompt,points,optionA,optionB,optionC,correct\nmcq,"What is 3*3?",5,6,9,12,B\nmcq,"Pick a loop",5,while,elephant,banana,A',
+    markdown: '@type=coding points=20\nRead n and print n + n.\n```in\n4\n```\n```out\n8\n```\n---\n@type=mcq\nWhich keyword starts a loop?\n- [ ] if\n- [x] while',
+  }[format];
+
+  return (
+    <div className="card stack">
+      <h3 style={{ marginTop: 0 }}>Import questions <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>— skip the typing</span></h3>
+
+      <form className="stack" onSubmit={fetchUrl}>
+        <label>From a web page (URL)</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input type="url" placeholder="https://…/problem-page" value={url}
+            onChange={(ev) => setUrl(ev.target.value)} required />
+          <button disabled={urlBusy || !url.trim()} style={{ flex: '0 0 auto' }}>
+            {urlBusy ? 'Fetching…' : 'Fetch'}
+          </button>
+        </div>
+        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+          The page text and any visible sample cases are pulled into the form below for you to
+          review. Only import content you have the right to use.
+        </p>
+        <ErrorText error={urlErr} />
+        {urlNote && <p className="badge ok" style={{ whiteSpace: 'normal' }}>{urlNote}</p>}
+      </form>
+
+      <details>
+        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Bulk import (many at once)</summary>
+        <form className="stack" onSubmit={importBulk} style={{ marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select value={format} onChange={(ev) => setFormat(ev.target.value)} style={{ width: 'auto' }}>
+              <option value="json">JSON</option>
+              <option value="csv">CSV</option>
+              <option value="markdown">Markdown</option>
+            </select>
+            <input type="file" accept=".json,.csv,.md,.markdown,.txt" onChange={pickFile}
+              style={{ width: 'auto' }} />
+          </div>
+          <textarea value={content} placeholder={placeholder} spellCheck={false}
+            style={{ minHeight: 160 }} onChange={(ev) => setContent(ev.target.value)} />
+          <ErrorText error={bulkErr} />
+          {bulkMsg && <p className="badge ok">{bulkMsg}</p>}
+          <div><button disabled={bulkBusy || !content.trim()}>{bulkBusy ? 'Importing…' : 'Import all'}</button></div>
+        </form>
+      </details>
+    </div>
+  );
+}
+
+function AddQuestion({ testId, trackKind, onAdded, seed }) {
   const isCoding = trackKind === 'coding';
-  const [type, setType] = useState(isCoding ? 'coding' : 'mcq');
-  const [promptMd, setPromptMd] = useState('');
-  const [points, setPoints] = useState(10);
-  const [expectedAnswer, setExpectedAnswer] = useState('');
-  const [options, setOptions] = useState([{ label: '', isCorrect: true }, { label: '', isCorrect: false }]);
-  const [cases, setCases] = useState([{ stdin: '', expectedStdout: '', isSample: true }]);
+  const [type, setType] = useState(seed?.type ?? (isCoding ? 'coding' : 'mcq'));
+  const [promptMd, setPromptMd] = useState(seed?.promptMd ?? '');
+  const [points, setPoints] = useState(seed?.points ?? 10);
+  const [expectedAnswer, setExpectedAnswer] = useState(seed?.expectedAnswer ?? '');
+  const [options, setOptions] = useState(
+    seed?.options?.length
+      ? seed.options.map((o) => ({ label: o.label, isCorrect: !!o.isCorrect }))
+      : [{ label: '', isCorrect: true }, { label: '', isCorrect: false }],
+  );
+  const [cases, setCases] = useState(
+    seed?.cases?.length
+      ? seed.cases.map((c) => ({ stdin: c.stdin ?? '', expectedStdout: c.expectedStdout ?? '', isSample: c.isSample ?? true }))
+      : [{ stdin: '', expectedStdout: '', isSample: true }],
+  );
   const [err, setErr] = useState(null);
 
   async function submit(e) {
@@ -198,7 +320,10 @@ function AddQuestion({ testId, trackKind, onAdded }) {
 
   return (
     <form className="card stack" onSubmit={submit}>
-      <h3 style={{ marginTop: 0 }}>Add question</h3>
+      <h3 style={{ marginTop: 0 }}>{seed ? 'Review imported question' : 'Add question'}</h3>
+      {seed && <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+        Pre-filled from your import — edit anything, add hidden test cases, then save.
+      </p>}
       <div><label>Type</label>
         <select value={type} onChange={(e) => setType(e.target.value)}>
           {isCoding
