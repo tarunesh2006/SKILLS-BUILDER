@@ -13,7 +13,93 @@ function initials(name = '') {
   return ((parts[0]?.[0] || '') + (parts[1]?.[0] || parts[0]?.[1] || '')).toUpperCase() || '?';
 }
 
-function ProfileMenu({ user, onSignOut }) {
+const Chevron = () => (
+  <svg className="sh-row__chev" width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+
+const ICONS = {
+  dashboard: <path d="M4 13h6V3H4v10Zm0 8h6v-6H4v6Zm10 0h6V11h-6v10Zm0-18v6h6V3h-6Z" />,
+  path: <path d="M3 12h4l3 8 4-16 3 8h4" />,
+  test: <><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>,
+  content: <><path d="M4 4h16v16H4z" /><path d="M4 9h16M9 9v11" /></>,
+  reports: <><path d="M3 3v18h18" /><path d="M18 17V9M13 17V5M8 17v-3" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></>,
+};
+
+const Icon = ({ name }) => (
+  <svg className="sh-sec__icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+    {ICONS[name]}
+  </svg>
+);
+
+function Row({ to, label, onGo }) {
+  return (
+    <NavLink to={to} className="sh-row" onClick={onGo}>
+      <span>{label}</span>
+      <Chevron />
+    </NavLink>
+  );
+}
+
+function ProfilePanel({ user, roleLabel, onSignOut }) {
+  const isAdmin = user.role === 'admin';
+  return (
+    <div className="sh-panel" role="menu">
+      <div className="sh-panel__head">
+        <span className="sh-panel__avatar">{initials(user.fullName)}</span>
+        <div className="sh-panel__id">
+          <strong>{user.fullName}</strong>
+          <span>{roleLabel}</span>
+        </div>
+        <button type="button" className="sh-logout" onClick={onSignOut}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="m16 17 5-5-5-5M21 12H9" />
+          </svg>
+          Logout
+        </button>
+      </div>
+
+      {isAdmin ? (
+        <div className="sh-sec">
+          <div className="sh-sec__title"><Icon name="content" /> Manage</div>
+          <Row to="/admin" label="Content manager" />
+          <Row to="/admin/tests" label="Test creator" />
+          <Row to="/admin/reports" label="Reports" />
+        </div>
+      ) : (
+        <>
+          <div className="sh-sec">
+            <div className="sh-sec__title"><Icon name="dashboard" /> Dashboard</div>
+            <Row to="/catalog" label="My learning" />
+          </div>
+          <div className="sh-sec">
+            <div className="sh-sec__title"><Icon name="path" /> Progress</div>
+            <Row to="/progress" label="My path" />
+            <Row to="/tests" label="My tests" />
+          </div>
+        </>
+      )}
+
+      <div className="sh-sec">
+        <div className="sh-sec__title"><Icon name="user" /> Account</div>
+        <div className="sh-kv"><span>{isAdmin ? 'Username' : 'Email'}</span>
+          <b>{user.email || user.rollNumber || user.username}</b></div>
+        {!isAdmin && user.rollNumber && (
+          <div className="sh-kv"><span>Roll number</span><b>{user.rollNumber}</b></div>
+        )}
+        <div className="sh-kv"><span>Role</span><b>{roleLabel}</b></div>
+      </div>
+    </div>
+  );
+}
+
+function UserBadge({ user, roleLabel, onSignOut }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -29,41 +115,32 @@ function ProfileMenu({ user, onSignOut }) {
     };
   }, [open]);
 
-  const isAdmin = user.role === 'admin';
-
   return (
-    <div className="sh-profile" ref={ref}>
+    <div className="sh-badge-wrap" ref={ref}>
       <button
-        className="sh-avatar"
+        className={`sh-badge${open ? ' is-open' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Account menu"
         onClick={() => setOpen((o) => !o)}
       >
-        {initials(user.fullName)}
+        <span className="sh-badge__avatar">{initials(user.fullName)}</span>
+        <span className="sh-badge__text">
+          <b>{user.fullName}</b>
+          <i>{roleLabel}</i>
+        </span>
+        <svg className="sh-badge__caret" width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </button>
       {open && (
-        <div className="sh-menu" role="menu">
-          <div className="sh-menu__head">
-            <strong>{user.fullName}</strong>
-            <span>{user.email || user.rollNumber || user.username}</span>
-          </div>
-          {isAdmin ? (
-            <>
-              <NavLink to="/admin" role="menuitem" onClick={() => setOpen(false)}>Content manager</NavLink>
-              <NavLink to="/admin/reports" role="menuitem" onClick={() => setOpen(false)}>Reports</NavLink>
-            </>
-          ) : (
-            <>
-              <NavLink to="/progress" role="menuitem" onClick={() => setOpen(false)}>My path</NavLink>
-              <NavLink to="/tests" role="menuitem" onClick={() => setOpen(false)}>My tests</NavLink>
-            </>
-          )}
-          <button type="button" className="sh-signout" role="menuitem" onClick={onSignOut}>
-            Sign out
-          </button>
-        </div>
+        <ProfilePanel
+          user={user}
+          roleLabel={roleLabel}
+          onSignOut={() => { setOpen(false); onSignOut(); }}
+        />
       )}
+      {open && <div className="sh-panel-scrim" onClick={() => setOpen(false)} />}
     </div>
   );
 }
@@ -78,6 +155,7 @@ export default function SiteHeader() {
 
   const isAdmin = user.role === 'admin';
   const home = isAdmin ? '/admin' : '/catalog';
+  const roleLabel = isAdmin ? 'Administrator' : 'Learner';
 
   return (
     <header className="sh">
@@ -103,8 +181,9 @@ export default function SiteHeader() {
           )}
         </nav>
 
-        <ProfileMenu
+        <UserBadge
           user={user}
+          roleLabel={roleLabel}
           onSignOut={() => { logout(); navigate('/login', { replace: true }); }}
         />
       </div>
