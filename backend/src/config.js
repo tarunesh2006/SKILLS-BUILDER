@@ -44,6 +44,17 @@ module.exports = {
   // hidden fallback: student email/roll + password login. Off by default.
   allowPasswordLogin: process.env.ALLOW_PASSWORD_LOGIN !== 'false',
 
+  // AI question author. Points at a LOCAL model server by default (Ollama) so
+  // no API key is needed. Set AI_API_STYLE=openai + AI_BASE_URL + AI_API_KEY to
+  // use an OpenAI-compatible endpoint instead.
+  ai: {
+    style: process.env.AI_API_STYLE || 'ollama', // 'ollama' | 'openai'
+    baseUrl: (process.env.AI_BASE_URL || 'http://localhost:11434').replace(/\/$/, ''),
+    model: process.env.AI_MODEL || 'qwen2.5-coder:7b',
+    apiKey: process.env.AI_API_KEY || '',
+    timeoutMs: Number(process.env.AI_TIMEOUT_MS || 120000),
+  },
+
   seed: {
     adminUsername: process.env.SEED_ADMIN_USERNAME || 'admin',
     adminPassword: process.env.SEED_ADMIN_PASSWORD || 'admin123',

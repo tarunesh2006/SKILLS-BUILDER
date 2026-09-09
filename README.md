@@ -117,6 +117,28 @@ The backend verifies the Google ID token itself (no extra npm package). While
 On their first Google login a student is sent to **/complete-profile** to choose
 a username and enter their roll number.
 
+### AI question author (no API key)
+
+The **Generate with AI** box in the test editor talks to a **local** model
+server — no key, no cloud, no cost.
+
+1. Install [Ollama](https://ollama.com/download).
+2. `ollama pull qwen2.5-coder:7b` (a coding-tuned ~4 GB model; any Ollama model
+   works — set `AI_MODEL` to match).
+3. `ollama serve` (Ollama usually runs this automatically).
+
+That's it — the editor shows a green "verified" note once it can reach the model.
+The backend never sends the model an API key. It checks reachability at
+`GET /admin/ai/status`.
+
+For coding questions the model's **reference solution is compiled and executed in
+the Piston judge**, and each test case's expected output is replaced with what
+the reference actually prints — so a wrong number from the model is corrected
+automatically, and a non-compiling solution is flagged for you.
+
+Prefer a hosted OpenAI-compatible endpoint instead? Set `AI_API_STYLE=openai`,
+`AI_BASE_URL`, `AI_MODEL` and `AI_API_KEY` in `backend/.env`.
+
 ### Adding more users (admins and students)
 
 ```bash
@@ -137,7 +159,12 @@ Pass `--inactive` to create the account disabled.
 2. Open it and use the tabs:
    - **Questions** — add coding questions (stdin → expected stdout, mark some
      cases *visible sample*) or MCQ / short-answer for non-coding tracks.
-     *Or import instead of typing:*
+     *Or generate / import instead of typing:*
+     - **Generate with AI** — describe the question in a sentence; a local model
+       drafts the full statement and test cases, then (for coding) its reference
+       solution is compiled and run in the judge so every case's expected output
+       is **verified**, not taken on the model's word. You review and save.
+       No API key — see *AI question author* below.
      - **From a URL** — paste a problem page; the server fetches it and
        best-effort extracts the statement + visible sample cases into the form
        for review. (Works well on static problem pages e.g. CSES, Codeforces,

@@ -8,6 +8,7 @@ const accessCodes = require('../services/accessCode.service');
 const grading = require('../services/grading.service');
 const contest = require('../services/contest.service');
 const questionImport = require('../services/questionImport.service');
+const aiAuthor = require('../services/aiAuthor.service');
 
 const router = express.Router();
 router.use(authenticate, requireRole('admin'));
@@ -447,6 +448,38 @@ router.post('/tests/:id/import/bulk',
       return ids;
     });
     res.status(201).json({ created: created.length, ids: created });
+  }));
+
+// AI question author (talks to a local model, no API key) --------------------
+router.get('/ai/status', asyncHandler(async (_req, res) => {
+  res.json(await aiAuthor.status());
+}));
+
+router.post('/tests/:id/import/ai',
+  body(z.object({
+    idea: z.string().trim().min(8).max(4000),
+    type: z.enum(['coding', 'mcq', 'short_answer', 'query']).optional(),
+    difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+    sampleCount: z.coerce.number().int().min(1).max(4).optional(),
+    hiddenCount: z.coerce.number().int().min(1).max(12).optional(),
+  })),
+  asyncHandler(async (req, res) => {
+    const test = await db.one(
+      `SELECT t.id, tr.judge_language, tr.kind AS track_kind
+         FROM tests t JOIN tracks tr ON tr.id = t.track_id WHERE t.id = :id`,
+      { id: req.params.id },
+    );
+    if (!test) throw notFound('Test not found');
+    const type = req.body.type || (test.track_kind === 'coding' ? 'coding' : 'mcq');
+    const out = await aiAuthor.generate({
+      idea: req.body.idea,
+      type,
+      judgeLanguage: test.judge_language,
+      difficulty: req.body.difficulty,
+      sampleCount: req.body.sampleCount,
+      hiddenCount: req.body.hiddenCount,
+    });
+    res.json(out);
   }));
 
 router.delete('/items/:itemId', asyncHandler(async (req, res) => {

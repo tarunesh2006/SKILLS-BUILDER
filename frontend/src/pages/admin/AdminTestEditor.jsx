@@ -183,6 +183,85 @@ function Questions({ testId, trackKind }) {
 }
 
 /* --------------------------------------------------- import without typing */
+function AiGenerator({ testId, trackKind, onDraft }) {
+  const st = useFetch('/admin/ai/status');
+  const [idea, setIdea] = useState('');
+  const [difficulty, setDifficulty] = useState('medium');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [result, setResult] = useState(null);
+
+  async function generate(e) {
+    e.preventDefault();
+    setBusy(true); setErr(null); setResult(null);
+    try {
+      const d = await api(`/admin/tests/${testId}/import/ai`, {
+        method: 'POST',
+        body: {
+          idea: idea.trim(),
+          type: trackKind === 'coding' ? 'coding' : 'mcq',
+          difficulty,
+        },
+      });
+      onDraft(d.draft);
+      setResult(d);
+    } catch (e2) { setErr(e2); } finally { setBusy(false); }
+  }
+
+  const status = st.data;
+  const ready = status?.enabled && (status.style !== 'ollama' || status.modelPulled !== false);
+
+  return (
+    <form className="stack" onSubmit={generate}>
+      <label>Describe the question — AI writes it, with test cases</label>
+      <textarea
+        value={idea} spellCheck={false} style={{ minHeight: 90 }}
+        placeholder={trackKind === 'coding'
+          ? 'e.g. "Given an array of N integers, print the length of the longest strictly increasing run. Medium difficulty."'
+          : 'e.g. "Pointers vs arrays in C — one tricky conceptual MCQ."'}
+        onChange={(e) => setIdea(e.target.value)}
+      />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} style={{ width: 'auto' }}>
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button disabled={busy || !idea.trim() || (status && !ready)} style={{ flex: '0 0 auto' }}>
+          {busy ? 'Generating…' : 'Generate'}
+        </button>
+        {trackKind === 'coding' && (
+          <span className="muted" style={{ fontSize: 12 }}>
+            The AI’s reference solution is run in the judge and the case outputs are verified.
+          </span>
+        )}
+      </div>
+
+      {status && !ready && (
+        <p className="badge warn" style={{ whiteSpace: 'normal' }}>
+          No local model reachable ({status.detail}). Install <strong>Ollama</strong>, run
+          {' '}<code>ollama pull {status.model}</code>, then <code>ollama serve</code>. See the README.
+        </p>
+      )}
+      <ErrorText error={err} />
+      {result && (
+        <div className="stack" style={{ marginTop: 4 }}>
+          <p className="badge ok" style={{ whiteSpace: 'normal' }}>{result.note}</p>
+          {result.meta?.verification?.warnings?.map((w, i) => (
+            <p key={i} className="badge warn" style={{ whiteSpace: 'normal' }}>{w}</p>
+          ))}
+          {result.meta?.referenceSolution && (
+            <details>
+              <summary style={{ cursor: 'pointer' }} className="muted">AI reference solution ({result.meta.language})</summary>
+              <pre>{result.meta.referenceSolution}</pre>
+            </details>
+          )}
+        </div>
+      )}
+    </form>
+  );
+}
+
 function ImportPanel({ testId, trackKind, onDraft, onBulkDone }) {
   const [url, setUrl] = useState('');
   const [urlBusy, setUrlBusy] = useState(false);
@@ -239,24 +318,29 @@ function ImportPanel({ testId, trackKind, onDraft, onBulkDone }) {
 
   return (
     <div className="card stack">
-      <h3 style={{ marginTop: 0 }}>Import questions <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>— skip the typing</span></h3>
+      <h3 style={{ marginTop: 0 }}>Add questions <span className="muted" style={{ fontWeight: 400, fontSize: 13 }}>— generate or import instead of typing</span></h3>
 
-      <form className="stack" onSubmit={fetchUrl}>
-        <label>From a web page (URL)</label>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input type="url" placeholder="https://…/problem-page" value={url}
-            onChange={(ev) => setUrl(ev.target.value)} required />
-          <button disabled={urlBusy || !url.trim()} style={{ flex: '0 0 auto' }}>
-            {urlBusy ? 'Fetching…' : 'Fetch'}
-          </button>
-        </div>
-        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          The page text and any visible sample cases are pulled into the form below for you to
-          review. Only import content you have the right to use.
-        </p>
-        <ErrorText error={urlErr} />
-        {urlNote && <p className="badge ok" style={{ whiteSpace: 'normal' }}>{urlNote}</p>}
-      </form>
+      <AiGenerator testId={testId} trackKind={trackKind} onDraft={onDraft} />
+
+      <details>
+        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Import from a web page (URL)</summary>
+        <form className="stack" onSubmit={fetchUrl} style={{ marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input type="url" placeholder="https://…/problem-page" value={url}
+              onChange={(ev) => setUrl(ev.target.value)} required />
+            <button disabled={urlBusy || !url.trim()} style={{ flex: '0 0 auto' }}>
+              {urlBusy ? 'Fetching…' : 'Fetch'}
+            </button>
+          </div>
+          <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+            The page text and any visible sample cases are pulled into the form below for you to
+            review. Only import content you have the right to use. Many sites block bots — if that
+            happens, paste the text into bulk import.
+          </p>
+          <ErrorText error={urlErr} />
+          {urlNote && <p className="badge ok" style={{ whiteSpace: 'normal' }}>{urlNote}</p>}
+        </form>
+      </details>
 
       <details>
         <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Bulk import (many at once)</summary>
